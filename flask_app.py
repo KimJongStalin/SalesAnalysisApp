@@ -49,7 +49,7 @@ def upload_file():
                 dashboard_data = analyzer.prepare_html_report_data() # 修改为调用 prepare_html_report_data
                 if dashboard_data:
                     data_json = json.dumps(dashboard_data, ensure_ascii=False)
-                    return render_template('report.html', data_json=data_json)
+                    return render_template('sales_analysis_report.html', data_json=data_json)
                 else:
                     return "❌ 分析失败，请检查上传文件的内容。", 500
             except Exception as e:
@@ -61,6 +61,7 @@ def upload_file():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+
 
 
 
