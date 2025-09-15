@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 from scipy.stats.mstats import winsorize
 from itertools import combinations
-
+import statsmodels.api as sm
 
 class SalesAnalyzer:
     """
@@ -26,7 +26,8 @@ class SalesAnalyzer:
             self.df = pd.read_excel(file_path)
             print(f"  - 初始加载了 {len(self.df)} 行数据")
         except Exception as e:
-            print(f"❌ {e}"); return False
+            print(f"❌ {e}")
+            return False
 
         date_col = cols['date']
         try:
@@ -47,7 +48,8 @@ class SalesAnalyzer:
         self.df.sort_values(date_col, inplace=True)
 
         if self.df.empty:
-            print("⚠️ 警告: 处理后没有剩下有效的数据。"); return False
+            print("⚠️ 警告: 处理后没有剩下有效的数据。")
+            return False
 
         first_listed_date_col = cols.get('first_listed_date')
         if first_listed_date_col and first_listed_date_col in self.df.columns:
@@ -56,16 +58,6 @@ class SalesAnalyzer:
         print("✅ 数据加载与预处理成功。")
         return True
 
-    def get_analyzable_columns(self):
-        if self.df is None: return []
-        cols_config = self.config['columns']
-        cols_to_exclude = {
-            cols_config.get('date'), cols_config.get('sales'),
-            cols_config.get('asin'), cols_config.get('first_listed_date'),
-            cols_config.get('type')
-        }
-        return [col for col in self.df.columns if col not in cols_to_exclude and self.df[col].nunique() > 1]
-    
     def prepare_html_report_data(self) -> dict:
         """为交互式仪表板准备一个结构化的、JSON兼容的数据集合。"""
         print("\n--- 正在准备所有分析数据 ---")
@@ -90,37 +82,37 @@ class SalesAnalyzer:
                             dynamic_time_events.append({"label": event_name, "date": full_date_str})
                     except ValueError:
                         continue
-        
+
         # --- 模块2：销售预测 (使用 SARIMAX) ---
         print("--- 正在计算销售预测 ---")
         forecast_data = {}
         for p_type in product_types:
             df_filtered = self.df if p_type == "Overall" else self.df[self.df[type_col] == p_type]
             monthly_sales = df_filtered.set_index(date_col)[sales_col].resample('M').sum()
-            
+
             if len(monthly_sales) < 24:
                 continue
-            
+
             try:
                 # SARIMA 模型代码
-                model = SARIMAX(monthly_sales, 
-                                order=(1, 1, 1), 
+                model = SARIMAX(monthly_sales,
+                                order=(1, 1, 1),
                                 seasonal_order=(1, 1, 1, 12),
                                 enforce_invertibility=False,
                                 enforce_stationarity=False)
-                
+
                 model_fit = model.fit(disp=False)
-                
+
                 forecast_result = model_fit.get_forecast(steps=12)
                 forecast_ci = forecast_result.conf_int()
-                
+
                 forecast_points = []
                 for i in range(len(forecast_result.predicted_mean)):
                     date = forecast_result.predicted_mean.index[i].strftime('%Y-%m-%d')
                     value = forecast_result.predicted_mean.iloc[i]
                     lower = forecast_ci.iloc[i, 0]
                     upper = forecast_ci.iloc[i, 1]
-                    
+
                     forecast_points.append({
                         "x": date,
                         "y": round(value, 0),
@@ -139,7 +131,7 @@ class SalesAnalyzer:
                 z = np.polyfit(x, y, 1)
                 p = np.poly1d(z)
                 trend_line_points = [{'x': date.strftime('%Y-%m-%d'), 'y': round(p(i), 0)} for i, date in enumerate(all_data_series.index)]
-                
+
                 forecast_data[p_type] = {
                     "historical": historical_points,
                     "forecast": forecast_points,
@@ -147,7 +139,7 @@ class SalesAnalyzer:
                     "trend_line": trend_line_points
                 }
             except Exception as e:
-                print(f"❌ 为 '{p_type}' 类型生成 SARIMAX 预测时发生错误: {e}") 
+                print(f"❌ 为 '{p_type}' 类型生成 SARIMAX 预测时发生错误: {e}")
                 continue
 
         print("--- 正在计算季度同比增长 ---")
@@ -441,7 +433,7 @@ class SalesAnalyzer:
                     prior_quarters = sales_by_dim.columns[-8:-4]
 
                     if not all(q in quarterly_total_sales_slice.index for q in recent_quarters) or \
-                       not all(q in quarterly_total_sales_slice.index for q in prior_quarters):
+                            not all(q in quarterly_total_sales_slice.index for q in prior_quarters):
                         continue
 
                     yearly_sales = sales_by_dim[recent_quarters].sum(axis=1)
@@ -486,47 +478,3 @@ class SalesAnalyzer:
             "structuralKpis": structural_kpis,
             "strategicPositioning": strategic_positioning_data
         }
-
-    def export_to_html(self):
-        cfg = self.config['html_report']
-        if not cfg['enabled']: return
-        report_data = self.prepare_html_report_data()
-        try:
-            with open(cfg['template_path'], 'r', encoding='utf-8') as f: template_html = f.read()
-        except FileNotFoundError: print(f"❌ 错误: HTML模板 '{cfg['template_path']}' 未找到。"); return
-        final_html = template_html.replace("__DATA_PLACEHOLDER__", json.dumps(report_data, ensure_ascii=False))
-        try:
-            with open(cfg['output_path'], 'w', encoding='utf-8') as f: f.write(final_html)
-        except Exception as e: print(f"❌ 写入HTML报告时发生错误: {e}")
-
-    def run_analysis(self):
-        if self.load_and_preprocess_data():
-            print("\n" + "#"*50 + "\n####  开始执行自动化分析...  ####\n" + "#"*50)
-            self.export_to_html()
-            print("\n\n" + "#"*50 + "\n🎉 全部分析流程执行完毕！\n" + "#"*50)
-        else:
-            print("\n❌ 分析因数据加载失败而终止。")
-
-if __name__ == "__main__":
-    analysis_config = {
-        "input_filepath": "liquid highlighters.xlsx",
-        "html_report": { "enabled": True, "template_path": "sales_analysis_report.html", "output_path": "Sales_Dashboard_Final.html" },
-        "columns": {
-            "date": "Date", "sales": "Sales", "type": "类型", "brand": "Brand",
-            "packsize": "产品支数", "pricerange": "ASP区间", "tiptype": "tiptype", "asin": "ASIN",
-            "first_listed_date": "上架时间" # 新增列
-        },
-        "header_mappings": { "brand": "Brand", "packsize": "PackSize", "pricerange": "PriceRange", "tiptype": "TipType", "tiptype packsize": "TipType & PackSize" },
-
-        "time_events": {
-            "Prime Day": "07-16",
-            "Back to School": "08-15",
-            "Prime Fall Event": "10-10",
-            "Black Friday": "11-29",
-            "Christmas": "12-25",
-            "Valentine's Day": "02-14",
-            "Mother's Day": "05-11"
-        },
-    }
-    analyzer = SalesAnalyzer(config=analysis_config)
-    analyzer.run_analysis()
