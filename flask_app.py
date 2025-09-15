@@ -53,10 +53,13 @@ def upload_file():
                 else:
                     return "❌ 分析失败，请检查上传文件的内容。", 500
             except Exception as e:
+                print("❌ 分析脚本发生未预期的错误！")
+                traceback.print_exc()
                 return f"❌ 内部服务器错误: {e}", 500
                 
     return render_template('upload.html')
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+
 
