@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -39,15 +38,6 @@
             </div>
             <div class="chart-container" style="height: 500px;"><canvas id="salesForecastChart"></canvas></div>
         </div>
-        <!-- <div class="dashboard-section">
-            <div class="section-header d-flex justify-content-between align-items-center">
-                <h2>Prophet 模型预测分解表</h2>
-                <div class="controls d-flex">
-                    <select id="breakdown-table-filter" class="form-select"></select>
-                </div>
-            </div>
-            <div id="forecastBreakdownContainer_independent" class="table-container" style="min-height: 0; max-height: 400px; overflow-y: auto;"></div>
-        </div> -->
         <div class="dashboard-section">
             <div class="section-header"><h2>季度销售额 vs 同比增长率</h2></div>
             <div class="chart-container"><canvas id="quarterlyYoYChart"></canvas></div>
@@ -95,7 +85,7 @@
                 </div>
                 <div class="controls d-flex">
                     <select id="strategic-type-filter" class="form-select me-2">
-                        </select>
+                    </select>
                     <select id="strategic-dimension-filter" class="form-select">
                         </select>
                 </div>
@@ -115,30 +105,24 @@
             </div>
             <div id="growthTableContainer" class="table-container" style="min-height: 0;"></div>
         </div>
-     
         
-
-    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             let reportData;
             try {
-              reportData = __DATA_PLACEHOLDER__;
+              reportData = {{ data_json | safe }};
               if (typeof reportData !== 'object' || reportData === null) { throw new Error("数据格式无效。"); }
             } catch (error) { document.body.innerHTML = '<div class="alert alert-danger m-5"><h1>加载数据失败</h1><p>无法解析数据。</p></div>'; return; }
 
             Chart.register(ChartDataLabels);
             Chart.defaults.scale.grid.display = false;
             Chart.defaults.plugins.datalabels.display = false;
-            
             let charts = {};
             const chartColors = ['#7F80BA', '#BDAECD', '#F7D691', '#85C1E9', '#73C6B6', '#F0B27A', '#C39BD3', '#D9A1B3', '#A1D9C3', '#D9B3A1'];
-
             const populateSelect = (selectId, options, selectedValue) => {
                 const select = document.getElementById(selectId);
                 if(select) select.innerHTML = options.map(opt => `<option value="${opt}" ${opt === selectedValue ? 'selected' : ''}>${opt}</option>`).join('');
             };
-            
             const createOrUpdateChart = (chartId, config) => {
                 const container = document.getElementById(chartId)?.parentElement;
                 if (!container) return;
@@ -156,7 +140,6 @@
                     container.innerHTML = '<div class="error-message">图表数据不足，无法渲染。</div>';
                 }
             };
-
             const renderTable = (containerId, tableData) => {
                 const container = document.getElementById(containerId);
                 if (!container) return;
@@ -198,7 +181,6 @@
                         reportData.time_events.forEach((event, index) => {
                         // 使用 event.label 作为标签内容，event.date 作为位置
                           annotations['event_' + index] = { type: 'line', scaleID: 'x', value: event.date, borderColor: 'rgba(229, 122, 119, 0.7)', borderWidth: 1, borderDash: [6, 6], label: { content: event.label, display: true, position: 'start', rotation: -90, font: { size: 10 }, yAdjust: 10 } };
-                        
                         });
                     }
                     const chartData = {
@@ -215,7 +197,6 @@
                         type: 'bar', data: chartData,
                         options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'time', time: { unit: 'month',displayFormats: {month: 'MMM yyyy'} },ticks: {source: 'data'} } }, plugins: { title: { display: true, text: `销售预测 - ${pType}` }, annotation: {annotations}, legend: { labels: { filter: item => item.text !== 'Lower Bound' } } } }
                     });
-                    
                 };
                 document.getElementById('forecast-filter').addEventListener('change', updateForecastChart);
                 updateForecastChart();
@@ -231,7 +212,7 @@
                   data: {
                     labels: data.labels,
                     datasets: [
-                      { label: 'Top 20 销售贡献度 (%)', data: data.top20_contrib, borderColor: '#7F80BA', borderWidth: 3, tension: 0.1 },
+                        { label: 'Top 20 销售贡献度 (%)', data: data.top20_contrib, borderColor: '#7F80BA', borderWidth: 3, tension: 0.1 },
                       { label: 'Top 50 销售贡献度 (%)', data: data.top50_contrib, borderColor: '#BDAECD', borderWidth: 2, borderDash: [5, 5], tension: 0.1 },
                       { label: '新品销售占比 (%)', data: data.new_sales_pct, borderColor: '#F7D691', borderWidth: 2, tension: 0.1 },
                       { label: '总增长率 (%)', data: data.total_yoy,  borderColor: 'black', borderWidth: 2,borderDash: [2, 2], tension: 0.1,pointRadius: 0},
@@ -252,7 +233,7 @@
                       }
                     }
                   }
-                });  
+                });
               };
               populateSelect('kpi-filter', reportData.product_types, 'Overall');
               document.getElementById('kpi-filter').addEventListener('change', update);
@@ -301,8 +282,9 @@
                                 datalabels: { display: true, color: 'white', font: { weight: 'bold' }, formatter: (value) => (value > 3 ? value.toFixed(1) + '%' : null) },
                                 tooltip: { callbacks: {
                                     label: function(context) {
-                                        const dataset = context.dataset; const dataIndex = context.dataIndex; const label = dataset.label || '';
-                                        const percentage = context.formattedValue + '%'; const absoluteValue = dataset.absoluteData[dataIndex]; 
+                                        const dataset = context.dataset;
+                                        const dataIndex = context.dataIndex; const label = dataset.label || '';
+                                        const percentage = context.formattedValue + '%'; const absoluteValue = dataset.absoluteData[dataIndex];
                                         const formattedAbsolute = Math.round(absoluteValue).toLocaleString('en-US');
                                         return `${label}: ${percentage} (${formattedAbsolute})`;
                                     }
@@ -334,7 +316,6 @@
                 const typeFilter = document.getElementById('strategic-type-filter');
                 const dimFilter = document.getElementById('strategic-dimension-filter');
                 const container = document.getElementById('strategicBubbleChart')?.parentElement;
-
                 if (!strategicData || Object.keys(strategicData).length === 0) {
                     if (container) container.innerHTML = '<div class="error-message">战略定位图表数据不足。</div>';
                     return;
@@ -355,18 +336,15 @@
                     
                     // 使用深拷贝，防止修改原始数据对后续重绘造成影响
                     const data = JSON.parse(JSON.stringify(dataForChart));
-                    
                     // 预处理数据：计算半径和颜色范围
                     const salesData = data.map(d => d.r);
                     const maxSales = Math.max(...salesData, 1); // 避免数据为空时出错
                     const contribData = data.map(d => d.contrib).filter(c => !isNaN(c));
                     const minContrib = Math.min(...contribData, 0);
                     const maxContrib = Math.max(...contribData, 0);
-
                     data.forEach(d => {
                         d.r = (d.r / maxSales) * 50 + 5; // 将半径缩放到 5 到 55 之间
                     });
-                    
                     // 定义图表数据集
                     const chartData = {
                         datasets: [{
@@ -376,15 +354,14 @@
                                 const bubble = context.raw;
                                 if (bubble.contrib < 0) {
                                     const alpha = (minContrib !== 0) ? (bubble.contrib / minContrib) * 0.7 + 0.3 : 0.3;
-                                    return `rgba(220, 53, 69, ${alpha})`; // 红色代表负贡献
+                                    return `rgba(220, 53, 69, ${alpha})`;
                                 }
                                 const range = maxContrib - minContrib;
                                 const alpha = (range > 0) ? ((bubble.contrib - minContrib) / range) * 0.7 + 0.3 : 0.3;
-                                return `rgba(13, 110, 253, ${alpha})`; // 蓝色代表正贡献
+                                return `rgba(13, 110, 253, ${alpha})`;
                             },
                         }]
                     };
-
                     // 定义完整的图表配置
                     const chartConfig = {
                         type: 'bubble',
@@ -402,9 +379,7 @@
                                     callbacks: {
                                         label: function(context) {
                                             const d = context.raw;
-                                            // 【已修正】从正确的、动态的维度路径寻找原始数据
                                             const originalBubble = reportData.strategicPositioning[selectedType]?.[selectedDim]?.find(item => item.label === d.label);
-
                                             if (originalBubble) {
                                                 const salesText = originalBubble.r.toLocaleString('en-US');
                                                 return `${d.label}: 份额 ${d.x}%, 增长 ${d.y}%, 贡献 ${d.contrib}%, 年销售额 ${salesText}`;
@@ -416,8 +391,6 @@
                             }
                         }
                     };
-                    
-                    // 调用统一的图表创建/更新函数
                     createOrUpdateChart('strategicBubbleChart', chartConfig);
                 }
 
@@ -442,8 +415,6 @@
                 updateView();
             }
             
-
-
             function renderForecastBreakdownTable(containerId, tableData) {
                 const container = document.getElementById(containerId);
                 if (!container || !tableData || !tableData.rows || tableData.rows.length === 0) {
@@ -454,7 +425,6 @@
                 let html = `<div class="table-responsive"><table class="table table-sm table-striped table-hover">`;
                 // 创建表头
                 html += `<thead class="table-light" style="position: sticky; top: 0;"><tr>${tableData.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
-                
                 // 创建表身
                 html += `<tbody>`;
                 tableData.rows.forEach(row => {
@@ -483,7 +453,6 @@
                 const tableFilter = document.getElementById('breakdown-table-filter');
 
                 if (!forecastData || Object.keys(forecastData).length === 0) return;
-                
                 // 核心的表格更新函数
                 const updateTableView = () => {
                     const selectedType = tableFilter.value;
@@ -492,7 +461,6 @@
                         renderForecastBreakdownTable('forecastBreakdownContainer_independent', data.breakdown_table);
                     }
                 };
-                
                 // 首次加载时，填充下拉菜单
                 if (tableFilter.options.length === 0) {
                     (reportData.product_types || Object.keys(forecastData)).forEach(pType => {
@@ -502,89 +470,12 @@
 
                 // 绑定事件
                 tableFilter.onchange = updateTableView;
-
                 // 首次加载
                 updateTableView();
             }
 
-
-           
-            // 一维度气泡分析
-            // function setupStrategicBubbleChart() {
-            //     if (!reportData.strategicPositioning || !reportData.strategicPositioning.pricerange_bubble) {
-            //         document.getElementById('strategicBubbleChart').parentElement.innerHTML = '<div class="error-message">战略定位图表数据不足。</div>';
-            //         return;
-            //     }
-
-            //     const data = reportData.strategicPositioning.pricerange_bubble;
-                
-            //     // 1. 预处理数据，转换销售额为半径，并找到贡献度的范围
-            //     const salesData = data.map(d => d.r);
-            //     const maxSales = Math.max(...salesData, 1); // 避免数据为空时出错
-            //     const contribData = data.map(d => d.contrib).filter(c => !isNaN(c));
-            //     const minContrib = Math.min(...contribData, 0);
-            //     const maxContrib = Math.max(...contribData, 0);
-
-            //     data.forEach(d => {
-            //         d.r = (d.r / maxSales) * 50 + 5; // 半径在5到55之间
-            //     });
-                
-            //     // 2. 配置数据集，backgroundColor 现在是一个函数
-            //     const chartData = {
-            //         datasets: [{
-            //             label: '价格区间',
-            //             data: data,
-            //             backgroundColor: function(context) {
-            //                 const bubble = context.raw;
-            //                 const contrib = bubble.contrib;
-            //                 const range = maxContrib - minContrib;
-                            
-            //                 // 如果贡献度是负的（拖累增长），显示红色
-            //                 if (contrib < 0) {
-            //                     const alpha = (minContrib !== 0) ? (contrib / minContrib) * 0.7 + 0.3 : 0.3;
-            //                     return `rgba(220, 53, 69, ${alpha})`; // 红色
-            //                 }
-                            
-            //                 // 如果贡献度是正的，显示蓝色，贡献越大颜色越深
-            //                 const alpha = (range > 0) ? ((contrib - minContrib) / range) * 0.7 + 0.3 : 0.3;
-            //                 return `rgba(13, 110, 253, ${alpha})`; // 蓝色
-            //             },
-            //         }]
-            //     };
-
-            //     // 3. 渲染图表，并更新 tooltip
-            //     createOrUpdateChart('strategicBubbleChart', {
-            //         type: 'bubble',
-            //         data: chartData,
-            //         options: {
-            //             responsive: true,
-            //             maintainAspectRatio: false,
-            //             scales: {
-            //                 x: { title: { display: true, text: '市场份额 (%)' } },
-            //                 y: { title: { display: true, text: '同比增长率 (%)' } }
-            //             },
-            //             plugins: {
-            //                 title: { display: true, text: '各价格区间的市场地位与增长潜力' },
-            //                 tooltip: {
-            //                     callbacks: {
-            //                         label: function(context) {
-            //                             const d = context.raw;
-            //                             // 从原始数据中获取未处理的销售额
-            //                             const originalSales = reportData.strategicPositioning.pricerange_bubble.find(item => item.label === d.label).r;
-            //                             return `${d.label}: 份额 ${d.x}%, 增长 ${d.y}%, 贡献 ${d.contrib}%, 年销售额 ${originalSales.toLocaleString('en-US')}`;
-            //                         }
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     });
-            // }
-         
-
-
             function setupStarProductChart() {
                 if (!reportData.starProductAnalysis) return;
-                
                 const filterSelect = document.getElementById('star-product-filter');
                 const timeSlider = document.getElementById('time-slider');
                 const timeLabel = document.getElementById('time-slider-label');
@@ -605,7 +496,6 @@
                     }
 
                     availableQuarters = Object.keys(quarterData).sort();
-                    
                     productPaths[pType] = {};
                     availableQuarters.forEach(q => {
                         quarterData[q].points.forEach(p => {
@@ -613,7 +503,6 @@
                             productPaths[pType][p.label].push({ ...p, quarter: q });
                         });
                     });
-                    
                     timeSlider.max = availableQuarters.length - 1;
                     if(timeSlider.value > timeSlider.max || timeSlider.value === "" || !timeSlider.value) {
                        timeSlider.value = timeSlider.max;
@@ -628,12 +517,10 @@
                     timeLabel.textContent = selectedQuarter;
                     
                     const data = reportData.starProductAnalysis[pType][selectedQuarter];
-                    
                     // --- 关键修正点: 将数据点按is_stable和is_new分组 ---
                     const stableMatureProducts = data.points.filter(p => !p.is_new && p.is_stable);
                     const dynamicMatureProducts = data.points.filter(p => !p.is_new && !p.is_stable);
                     const newProducts = data.points.filter(p => p.is_new);
-                    
                     const datasets = [
                         { 
                             label: '动态产品', 
@@ -657,32 +544,29 @@
                             backgroundColor: selectedASIN ? 'rgba(220, 53, 69, 0.15)' : 'rgba(220, 53, 69, 0.7)'
                         }
                     ];
-                    
                     let annotations = {};
                     if(data.baseline_available) {
                         annotations = {
                             avgGrowthLine: { type: 'line', xMin: data.avg_growth, xMax: data.avg_growth, borderColor: '#dc3545', borderWidth: 2, label: { content: `增长趋势中位数: ${data.avg_growth.toFixed(2)}`, display: true, position: 'end', yAdjust: -10, backgroundColor: 'rgba(255, 255, 255, 0.7)', color: 'black', font: {size: 11}, padding: 4 } },
                             avgSalesLine: { type: 'line', yMin: data.avg_sales, yMax: data.avg_sales, borderColor: '#0d6efd', borderWidth: 2, label: { content: `销售额中位数: ${(data.avg_sales/10000).toFixed(2)}万`, display: true, position: 'start', xAdjust: 10, backgroundColor: 'rgba(255, 255, 255, 0.7)', color: 'black', font: {size: 11}, padding: 4 } },
-                            starLabel: { type: 'label', xValue: data.avg_growth, yValue: data.avg_sales, xAdjust: 15, yAdjust: -15,  font: {size: 14}, color: 'rgba(0,0,0,0.5)'},
+                            starLabel: { type: 'label', xValue: data.avg_growth, yValue: data.avg_sales, xAdjust: 15, yAdjust: -15, font: {size: 14}, color: 'rgba(0,0,0,0.5)'},
                             cashCowLabel: { type: 'label', xValue: data.avg_growth, yValue: data.avg_sales, xAdjust: -15, yAdjust: -15, font: {size: 14}, color: 'rgba(0,0,0,0.5)', textAlign: 'right'},
-                            questionLabel: { type: 'label', xValue: data.avg_growth, yValue: data.avg_sales, xAdjust: 15, yAdjust: 15,  font: {size: 14}, color: 'rgba(0,0,0,0.5)', textBaseline: 'bottom'},
-                            dogLabel: { type: 'label', xValue: data.avg_growth, yValue: data.avg_sales, xAdjust: -15, yAdjust: 15,  font: {size: 14}, color: 'rgba(0,0,0,0.5)', textAlign: 'right', textBaseline: 'bottom'},
+                            questionLabel: { type: 'label', xValue: data.avg_growth, yValue: data.avg_sales, xAdjust: 15, yAdjust: 15, font: {size: 14}, color: 'rgba(0,0,0,0.5)', textBaseline: 'bottom'},
+                            dogLabel: { type: 'label', xValue: data.avg_growth, yValue: data.avg_sales, xAdjust: -15, yAdjust: 15, font: {size: 14}, color: 'rgba(0,0,0,0.5)', textAlign: 'right', textBaseline: 'bottom'},
                             meanGrowthLine: { type: 'line', xMin: data.mean_growth, xMax: data.mean_growth, borderColor: '#dc3545', borderWidth: 1, borderDash: [5, 5],label: { content: `平均值: ${data.mean_growth.toFixed(2)}`, display: true,position: 'start', yAdjust: 10, font: {size: 10}, color: '#dc3545'}},
                             meanSalesLine: {type: 'line', yMin: data.mean_sales, yMax: data.mean_sales,borderColor: '#0d6efd', borderWidth: 1, borderDash: [5, 5],label: {content: `平均值: ${(data.mean_sales/10000).toFixed(2)}万`, display: true,position: 'end', xAdjust: -10, font: {size: 10}, color: '#0d6efd'}}, 
                             p25GrowthLine: {type: 'line', xMin: data.growth_p25, xMax: data.growth_p25,borderColor: '#dc3545', borderWidth: 1, borderDash: [6, 6],label: { content: `P25: ${data.growth_p25.toFixed(2)}`, display: true, position: 'end', yAdjust: 10, font: {size: 10}, backgroundColor: 'rgba(255, 255, 255, 0.7)', color: 'black' }},
                             p75GrowthLine: {type: 'line', xMin: data.growth_p75, xMax: data.growth_p75,borderColor: '#dc3545', borderWidth: 1, borderDash: [6, 6],label: { content: `P75: ${data.growth_p75.toFixed(2)}`, display: true, position: 'end', yAdjust: 10, xAdjust: 15, font: {size: 10}, backgroundColor: 'rgba(255, 255, 255, 0.7)', color: 'black' }},
-                        
+                    
                         };
                     }
 
                     if (selectedASIN && productPaths[pType][selectedASIN]) {
                         const path = productPaths[pType][selectedASIN];
-                        
                         datasets.push({
                             type: 'line', label: '轨迹线', data: path,
                             borderColor: '#007bff', borderWidth: 2, pointRadius: 0, tension: 0.1
                         });
-
                         datasets.push({
                             label: '轨迹点', data: path, pointStyle: 'circle',
                             radius: 10, backgroundColor: 'white', borderColor: '#007bff', borderWidth: 2,
@@ -691,7 +575,6 @@
                                 formatter: (value, context) => context.dataIndex + 1
                             }
                         });
-
                         const highlightedPoint = path.find(p => p.quarter === selectedQuarter);
                         if(highlightedPoint){
                             datasets.push({
