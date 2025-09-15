@@ -25,8 +25,11 @@ class SalesAnalyzer:
         try:
             self.df = pd.read_excel(file_path)
             print(f"  - 初始加载了 {len(self.df)} 行数据")
+            print("加载的列: ", self.df.columns.tolist())
         except Exception as e:
-            print(f"❌ {e}")
+            print(f"❌ 无法加载或解析 Excel 文件: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
         date_col = cols['date']
@@ -478,3 +481,4 @@ class SalesAnalyzer:
             "structuralKpis": structural_kpis,
             "strategicPositioning": strategic_positioning_data
         }
+
