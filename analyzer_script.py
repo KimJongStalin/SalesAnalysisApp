@@ -632,7 +632,7 @@ class SalesAnalyzer:
         print("--- 正在计算季度同比增长 ---")
         sales_wide_q = self.df.groupby([pd.Grouper(key=date_col, freq='Q'), type_col])[sales_col].sum().unstack(type_col).fillna(0)
         yoy_wide_q = sales_wide_q.pct_change(periods=4) * 100
-       quarterly_yoy_data = {"labels": sales_wide_q.index.to_period('Q').strftime('%YQ%q').tolist(), "sales_datasets": [{"label": str(col), "data": sales_wide_q[col].round(0).tolist()} for col in sales_wide_q.columns], "yoy_datasets": [{"label": str(col) + " YoY", "data": yoy_wide_q[col].where(pd.notna(yoy_wide_q[col]), None).round(1).tolist()} for col in yoy_wide_q.columns]}
+        quarterly_yoy_data = {"labels": sales_wide_q.index.to_period('Q').strftime('%YQ%q').tolist(), "sales_datasets": [{"label": str(col), "data": sales_wide_q[col].round(0).tolist()} for col in sales_wide_q.columns], "yoy_datasets": [{"label": str(col) + " YoY", "data": yoy_wide_q[col].where(pd.notna(yoy_wide_q[col]), None).round(1).tolist()} for col in yoy_wide_q.columns]}
         print("--- 正在计算市场份额 ---")
         share_dimensions = ['type', 'brand', 'packsize', 'pricerange', 'tiptype']
         share_data = {}
@@ -965,4 +965,5 @@ class SalesAnalyzer:
             "structuralKpis": structural_kpis,
             "strategicPositioning": strategic_positioning_data
         }
+
 
