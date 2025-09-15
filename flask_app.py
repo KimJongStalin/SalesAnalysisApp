@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for
 import json
 import os
 from werkzeug.utils import secure_filename
-from analyzer import SalesAnalyzer
+from analyzer_script import SalesAnalyzer
 
 app = Flask(__name__)
 # 配置上传文件夹和允许的文件扩展名
@@ -59,3 +59,4 @@ def upload_file():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+
