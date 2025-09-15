@@ -3,7 +3,7 @@ import json
 import os
 from werkzeug.utils import secure_filename
 from analyzer_script import SalesAnalyzer
-
+import traceback
 app = Flask(__name__)
 # 配置上传文件夹和允许的文件扩展名
 UPLOAD_FOLDER = 'uploads'
@@ -61,5 +61,6 @@ def upload_file():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+
 
 
