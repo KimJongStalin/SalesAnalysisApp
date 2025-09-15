@@ -483,8 +483,6 @@ class SalesAnalyzer:
         }
 
 
-analyzer_script.py
-... (other code is unchanged)
 
 
 
