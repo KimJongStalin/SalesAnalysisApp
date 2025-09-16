@@ -1,73 +1,144 @@
-import traceback
-import json
+# Cell 3: 创建 Flask API 服务器 app.py
+
+%%writefile app.py
+
 import os
-from werkzeug.utils import secure_filename
-from analyzer_script import SalesAnalyzer
-from flask import Flask, render_template, request, redirect, url_for
+import uuid
+import json
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
+from analyzer import SalesAnalyzer
+
+# --- 初始化和配置 ---
+UPLOAD_FOLDER = 'uploads'
+REPORT_FOLDER = 'reports'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(REPORT_FOLDER, exist_ok=True)
 
 app = Flask(__name__)
+CORS(app)
 
-# 配置上传文件夹为 Railway 挂载的卷路径
-UPLOAD_FOLDER = '/mnt/uploads'
-ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# 基础配置
+base_config = {
+    "html_report": { "template_path": "sales_analysis_report.html" },
+    "columns": {
+        "date": "Date", "sales": "Sales", "type": "类型", "brand": "Brand",
+        "packsize": "产品支数", "pricerange": "ASP区间", "tiptype": "tiptype", "asin": "ASIN",
+        "first_listed_date": "上架时间"
+    },
+    # Add other base configs from your analyzer if needed
+}
 
-# 检查文件扩展名是否合法
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+@app.route('/analyze', methods=['POST'])
+def analyze_endpoint():
+    if 'file' not in request.files or request.files['file'].filename == '':
+        return jsonify({'error': '未找到文件'}), 400
+    file = request.files['file']
+    
+    unique_id = uuid.uuid4().hex
+    input_filename = f"{unique_id}_{os.path.basename(file.filename)}"
+    input_filepath = os.path.join(UPLOAD_FOLDER, input_filename)
+    file.save(input_filepath)
 
-@app.route("/", methods=['GET', 'POST'])
-def upload_file():
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            return redirect(request.url)
-        file = request.files['file']
-        if file.filename == '':
-            return redirect(request.url)
+    report_filename = f"report_{unique_id}.html"
+    report_filepath = os.path.join(REPORT_FOLDER, report_filename)
+
+    current_config = base_config.copy()
+    current_config['input_filepath'] = input_filepath
+    
+    try:
+        analyzer = SalesAnalyzer(config=current_config)
+        success = analyzer.run_analysis()
+
+        if success:
+            analyzer.export_to_html(output_path=report_filepath)
+            return jsonify({ 
+                'message': '分析成功！', 
+                'report_url': f'/reports/{report_filename}' 
+            })
+        else:
+            return jsonify({'error': '分析引擎未能处理数据'}), 500
             
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    except Exception as e:
+        import traceback
+        return jsonify({'error': f'分析出错: {e}', 'trace': traceback.format_exc()}), 500
 
-            # 新增这行代码，确保目录存在
-            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+@app.route('/reports/<filename>')
+def serve_report(filename):
+    return send_from_directory(REPORT_FOLDER, filename)
 
-            try:
-                # 尝试将文件保存到 /mnt/uploads 目录
-                file.save(file_path)
-                print(f"✅ 文件已成功保存到: {file_path}")
-            except Exception as e:
-                print("❌ 文件保存失败！")
-                traceback.print_exc()
-                return f"❌ 文件保存失败: {e}", 500
+@app.route('/')
+def home():
+    # This is the user-facing upload page with JavaScript to handle API calls
+    return """
+    <!DOCTYPE html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <title>VOM 分析工具 (API版)</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+            body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: #f8f9fa; }
+            .container { max-width: 600px; text-align: center; } .spinner-border { width: 3rem; height: 3rem; }
+            #result, #error { margin-top: 2rem; }
+        </style>
+    </head>
+    <body>
+        <div class="container p-5 bg-white rounded shadow">
+            <div id="upload-form">
+                <h1 class="mb-4">VOM 销售数据分析 (API版)</h1>
+                <p class="text-muted mb-4">请上传您的销售数据 Excel 文件。</p>
+                <form id="analysis-form">
+                    <div class="input-group mb-3"><input type="file" class="form-control" id="fileInput" name="file" accept=".xlsx,.xls" required></div>
+                    <button type="submit" class="btn btn-primary btn-lg mt-3">开始分析</button>
+                </form>
+            </div>
+            <div id="loading-state" style="display: none;">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-3">正在进行深度分析... 报告生成后会自动跳转。</p>
+            </div>
+            <div id="result" class="alert alert-success" style="display: none;"></div>
+            <div id="error" class="alert alert-danger" style="display: none;"></div>
+        </div>
+    <script>
+        const form = document.getElementById('analysis-form');
+        const fileInput = document.getElementById('fileInput');
+        const uploadDiv = document.getElementById('upload-form');
+        const loadingDiv = document.getElementById('loading-state');
+        const resultDiv = document.getElementById('result');
+        const errorDiv = document.getElementById('error');
 
-            # 配置分析器使用上传的文件
-            analysis_config = {
-                "input_filepath": file_path,
-                "columns": {
-                    "date": "Date", "sales": "Sales", "type": "类型", "brand": "Brand",
-                    "packsize": "产品支数", "pricerange": "ASP区间", "tiptype": "tiptype", "asin": "ASIN",
-                    "first_listed_date": "上架时间"
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            uploadDiv.style.display = 'none';
+            loadingDiv.style.display = 'block';
+            resultDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/analyze', { method: 'POST', body: formData });
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `分析成功！将在3秒后跳转到报告页面... <a href="${data.report_url}" target="_blank">立即跳转</a>`;
+                    resultDiv.style.display = 'block';
+                    setTimeout(() => { window.location.href = data.report_url; }, 3000);
+                } else {
+                    throw new Error(data.trace || data.error || '未知错误');
                 }
+            } catch (error) {
+                errorDiv.innerHTML = '<b>分析失败:</b><pre style="text-align: left; white-space: pre-wrap;">' + error.message + '</pre>';
+                errorDiv.style.display = 'block';
+                uploadDiv.style.display = 'block';
+            } finally {
+                loadingDiv.style.display = 'none';
             }
-            
-            try:
-                # 运行分析并获取报告数据
-                analyzer = SalesAnalyzer(analysis_config)
-                dashboard_data = analyzer.prepare_html_report_data()
-                
-                if dashboard_data:
-                    data_json = json.dumps(dashboard_data, ensure_ascii=False)
-                    return render_template('sales_analysis_report.html', data_json=data_json)
-                else:
-                    return "❌ 分析失败，请检查上传文件的内容。", 500
-            except Exception as e:
-                print("❌ 分析脚本发生未预期的错误！")
-                traceback.print_exc()
-                return f"❌ 内部服务器错误: {e}", 500
-                
-    return render_template('upload.html')
+        });
+    </script>
+    </body></html>
+    """
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+print("✅ 第三步完成：Flask API 服务器 'app.py' 已创建！")
