@@ -6,7 +6,7 @@ from flask import Flask, request, render_template
 from werkzeug.utils import secure_filename
 
 # 导入我们项目中的分析引擎
-from analyzer import SalesAnalyzer
+from analyzer_script import SalesAnalyzer
 
 # 初始化 Flask 应用
 app = Flask(__name__)
@@ -77,3 +77,4 @@ if __name__ == '__main__':
     # Railway 会通过环境变量 PORT 告诉应用应该监听哪个端口
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+
