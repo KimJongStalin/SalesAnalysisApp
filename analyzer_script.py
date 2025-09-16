@@ -485,7 +485,7 @@ class SalesAnalyzer:
         # }
 
         print("\n✅ 核心分析流程全部完成！")
-        return True
+        # return True
 
     def export_to_html(self, output_path: str):
         """
@@ -521,4 +521,5 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
