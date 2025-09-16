@@ -1,0 +1,756 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VOM分析看板</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@2.0.1/dist/chartjs-chart-matrix.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root { --primary-color: #7F80BA; --secondary-color: #BDAECD; --accent-color: #F7D691; --text-color: #444; --background: #F8F9FA; --card-bg: #FFF; --border-color: #dee2e6;}
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--background); }
+        .page-header { text-align: center; color: var(--primary-color); margin-bottom: 40px; }
+        .module-separator h1 { color: #FFF; background-color: var(--primary-color); padding: 15px; border-radius: 8px; margin-top: 40px; margin-bottom: 40px; text-align: center; }
+        .dashboard-section { background-color: var(--card-bg); border-radius: 8px; margin-bottom: 30px; padding: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .section-header { border-bottom: 2px solid var(--secondary-color); padding-bottom: 15px; margin-bottom: 20px; color: var(--primary-color); }
+        .chart-container, .table-container { position: relative; width: 100%; min-height: 450px; }
+        .controls { gap: 1rem; }
+        .error-message { color: #dc3545; text-align: center; padding: 2rem; display: flex; align-items: center; justify-content: center; height: 100%; }
+        .table th, .table td { text-align: center; vertical-align: middle; }
+        .sales-value { font-size: 0.8em; color: #6c757d; }
+        .yoy-value { font-size: 1em; font-weight: bold; margin-left: 5px; }
+        .yoy-positive { color: #198754; } .yoy-negative { color: #dc3545; } .yoy-neutral { color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid my-4">
+        <div class="page-header"> <h1>VOM分析看板</h1> </div>
+
+        <div class="module-separator"><h1></h1></div>
+        <div class="dashboard-section">
+            <div class="section-header d-flex justify-content-between align-items-center">
+                <h2>月度销售走势与未来预测</h2>
+                <div class="controls d-flex"><select id="forecast-filter" class="form-select"></select></div>
+            </div>
+            <div class="chart-container" style="height: 500px;"><canvas id="salesForecastChart"></canvas></div>
+        </div>
+        <div class="dashboard-section">
+            <div class="section-header"><h2>季度销售额 vs 同比增长率</h2></div>
+            <div class="chart-container"><canvas id="quarterlyYoYChart"></canvas></div>
+        </div>
+        
+        <div class="module-separator"><h1></h1></div>
+        <div class="dashboard-section">
+            <div class="section-header d-flex justify-content-between align-items-center">
+                <h2 id="star-product-title">产品矩阵 (点击产品点可追踪轨迹)</h2>
+                <div class="controls d-flex"><select id="star-product-filter" class="form-select"></select></div>
+            </div>
+            <div class="d-flex align-items-center my-3">
+                <label for="time-slider" class="form-label me-3">选择季度:</label>
+                <input type="range" class="form-range" id="time-slider" style="display:none;">
+                <span id="time-slider-label" class="ms-3 fw-bold"></span>
+            </div>
+            <div class="chart-container" style="min-height: 800px;"><canvas id="starProductChart"></canvas></div>
+        </div>
+        <div class="module-separator"><h1></h1></div>
+        <div class="dashboard-section">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h2>核心结构指标演变 (% of Total Sales)</h2>
+            <div class="controls d-flex"><select id="kpi-filter" class="form-select"></select></div>
+          </div>
+          <div class="chart-container"><canvas id="kpiTimelineChart"></canvas></div>
+        </div>
+        <div class="module-separator"><h1></h1></div>
+        <div class="dashboard-section">
+            <div class="section-header d-flex justify-content-between align-items-center">
+                <h2>整合市场份额分析(季度, %)</h2>
+                <div class="controls d-flex">
+                    <select id="share-dimension-selector" class="form-select">
+                        <option value="brand">按品牌</option> <option value="packsize">按数量</option> <option value="pricerange">按价格段</option> <option value="tiptype">按笔头</option>
+                    </select>
+                    <select id="share-filter" class="form-select"></select>
+                </div>
+            </div>
+            <div class="chart-container" style="min-height: 600px;"><canvas id="shareAnalysisChart"></canvas></div>
+        </div>
+
+        <div class="module-separator"><h1></h1></div>
+        <div class="dashboard-section">
+            <div class="section-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>市场表现矩阵</h2>
+                </div>
+                <div class="controls d-flex">
+                    <select id="strategic-type-filter" class="form-select me-2">
+                        </select>
+                    <select id="strategic-dimension-filter" class="form-select">
+                        </select>
+                </div>
+            </div>
+            <div class="chart-container" style="height: 500px;"><canvas id="strategicBubbleChart"></canvas></div>
+        </div>
+        <div class="module-separator"><h1></h1></div>
+        <div class="dashboard-section">
+            <div class="section-header d-flex justify-content-between align-items-center">
+                <h2>整合增长表</h2>
+                <div class="controls d-flex">
+                    <select id="table-dimension-selector" class="form-select">
+                         <option value="brand">按品牌</option> <option value="packsize">按数量</option> <option value="pricerange">按价格段</option> <option value="tiptype">按笔头</option>
+                    </select>
+                    <select id="table-filter" class="form-select"></select>
+                </div>
+            </div>
+            <div id="growthTableContainer" class="table-container" style="min-height: 0;"></div>
+        </div>
+
+        
+
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let reportData;
+            try {
+              reportData = __DATA_PLACEHOLDER__;
+              if (typeof reportData !== 'object' || reportData === null) { throw new Error("数据格式无效。"); }
+            } catch (error) { document.body.innerHTML = '<div class="alert alert-danger m-5"><h1>加载数据失败</h1><p>无法解析数据。</p></div>'; return; }
+
+            Chart.register(ChartDataLabels);
+            Chart.defaults.scale.grid.display = false;
+            Chart.defaults.plugins.datalabels.display = false;
+            
+            let charts = {};
+            const chartColors = ['#7F80BA', '#BDAECD', '#F7D691', '#85C1E9', '#73C6B6', '#F0B27A', '#C39BD3', '#D9A1B3', '#A1D9C3', '#D9B3A1'];
+
+            const populateSelect = (selectId, options, selectedValue) => {
+                const select = document.getElementById(selectId);
+                if(select) select.innerHTML = options.map(opt => `<option value="${opt}" ${opt === selectedValue ? 'selected' : ''}>${opt}</option>`).join('');
+            };
+            
+            const createOrUpdateChart = (chartId, config) => {
+                const container = document.getElementById(chartId)?.parentElement;
+                if (!container) return;
+                const canvas = document.getElementById(chartId) || document.createElement('canvas');
+                canvas.id = chartId;
+                if (!container.contains(canvas)) {
+                    container.innerHTML = '';
+                    container.appendChild(canvas);
+                }
+                if (charts[chartId]) charts[chartId].destroy();
+                const hasData = config?.data?.datasets?.some(ds => ds.data && ds.data.length > 0);
+                if (hasData) {
+                    charts[chartId] = new Chart(canvas.getContext('2d'), config);
+                } else {
+                    container.innerHTML = '<div class="error-message">图表数据不足，无法渲染。</div>';
+                }
+            };
+
+            const renderTable = (containerId, tableData) => {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                if (!tableData || !tableData.rows || tableData.rows.length === 0) {
+                    container.innerHTML = '<p class="text-center text-muted mt-4">无可用表格数据</p>';
+                    return;
+                }
+                let html = `<div class="table-responsive"><table class="table table-sm table-striped table-hover">`;
+                html += `<thead class="table-light"><tr>${tableData.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
+                html += `<tbody>`;
+                tableData.rows.forEach(row => {
+                    html += '<tr>';
+                    row.forEach(cell => {
+                        if (cell.type === 'label') {
+                            html += `<td><strong>${cell.value}</strong></td>`;
+                        } else if (cell.type === 'data') {
+                            const salesSpan = `<span class="sales-value">${cell.value}</span>`;
+                            let yoySpan = '';
+                            if (cell.yoy !== null) {
+                                yoySpan = ` <span class="yoy-value yoy-${cell.yoy_status}">(${cell.yoy})</span>`;
+                            }
+                            html += `<td>${salesSpan}${yoySpan}</td>`;
+                        }
+                    });
+                    html += '</tr>';
+                });
+                html += `</tbody></table></div>`;
+                container.innerHTML = html;
+            };
+
+            function setupForecastModule() {
+                if (!reportData.salesForecast || !reportData.product_types) return;
+                populateSelect('forecast-filter', reportData.product_types, 'Overall');
+                const updateForecastChart = () => {
+                    const pType = document.getElementById('forecast-filter').value;
+                    const data = reportData.salesForecast[pType];
+                    const annotations = {};
+                     if (reportData.time_events && Array.isArray(reportData.time_events)) {
+                        reportData.time_events.forEach((event, index) => {
+                        // 使用 event.label 作为标签内容，event.date 作为位置
+                          annotations['event_' + index] = { type: 'line', scaleID: 'x', value: event.date, borderColor: 'rgba(229, 122, 119, 0.7)', borderWidth: 1, borderDash: [6, 6], label: { content: event.label, display: true, position: 'start', rotation: -90, font: { size: 10 }, yAdjust: 10 } };
+                        
+                        });
+                    }
+                    const chartData = {
+                        datasets: [
+                            { type: 'bar', label: '历史销售', data: data.historical, backgroundColor: 'rgba(189, 174, 205, 0.6)', order: 5 },
+                            { type: 'line', label: '预测', data: data.forecast, borderColor: '#F7D691', borderWidth: 2, order: 1 },
+                            { type: 'line', label: '置信区间', data: data.forecast, parsing: { yAxisKey: 'y_upper' }, fill: '+1', backgroundColor: 'rgba(247, 214, 145, 0.3)', borderColor: 'transparent', pointRadius: 0, order: 2 },
+                            { type: 'line', label: 'Lower Bound', data: data.forecast, parsing: { yAxisKey: 'y_lower' }, fill: false, borderColor: 'transparent', pointRadius: 0, order: 3 },
+                            { type: 'line', label: '3个月移动平均', data: data.moving_average, borderColor: '#63BF84', borderWidth: 2, borderDash: [5, 5], tension: 0.1, pointRadius: 0, order: 4 },
+                            { type: 'line', label: '线性趋势线', data: data.trend_line, borderColor: '#FF0000', borderWidth: 2, tension: 0.1, pointRadius: 0, order: 6 }
+                        ]
+                    };
+                    createOrUpdateChart('salesForecastChart', {
+                        type: 'bar', data: chartData,
+                        options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'time', time: { unit: 'month',displayFormats: {month: 'MMM yyyy'} },ticks: {source: 'data'} } }, plugins: { title: { display: true, text: `销售预测 - ${pType}` }, annotation: {annotations}, legend: { labels: { filter: item => item.text !== 'Lower Bound' } } } }
+                    });
+                    
+                };
+                document.getElementById('forecast-filter').addEventListener('change', updateForecastChart);
+                updateForecastChart();
+            }
+                     
+            function setupKpiTimelineChart() {
+              if (!reportData.structuralKpis) return;
+              const update = () => {
+                const pType = document.getElementById('kpi-filter').value;
+                const data = reportData.structuralKpis[pType];
+                createOrUpdateChart('kpiTimelineChart', {
+                  type: 'line',
+                  data: {
+                    labels: data.labels,
+                    datasets: [
+                      { label: 'Top 20 销售贡献度 (%)', data: data.top20_contrib, borderColor: '#7F80BA', borderWidth: 3, tension: 0.1 },
+                      { label: 'Top 50 销售贡献度 (%)', data: data.top50_contrib, borderColor: '#BDAECD', borderWidth: 2, borderDash: [5, 5], tension: 0.1 },
+                      { label: '新品销售占比 (%)', data: data.new_sales_pct, borderColor: '#F7D691', borderWidth: 2, tension: 0.1 },
+                      { label: '总增长率 (%)', data: data.total_yoy,  borderColor: 'black', borderWidth: 2,borderDash: [2, 2], tension: 0.1,pointRadius: 0},
+                      { label: 'Top 20 增量贡献度 (%)', data: data.top20_inc_contrib, borderColor: '#20c997', borderWidth: 2, tension: 0.1, hidden: true },
+                      { label: 'Top 50 增量贡献度 (%)', data: data.top50_inc_contrib, borderColor: '#fd7e14', borderWidth: 2, borderDash: [5, 5], tension: 0.1, hidden: true }
+                    ]
+                  },
+                  options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                      x: { grid: { display: true, color: '#eee' } },
+                      y: { ticks: { callback: v => v + '%' },grid: { display: true, color: '#eee' } }
+                    },
+                    plugins: {
+                      datalabels: {
+                        display: true, align: 'top', color: '#666', font: {size: 10},
+                        formatter: (value) => value + '%'
+                      }
+                    }
+                  }
+                });  
+              };
+              populateSelect('kpi-filter', reportData.product_types, 'Overall');
+              document.getElementById('kpi-filter').addEventListener('change', update);
+              update();
+            }
+
+            function setupQuarterlyYoYChart(){
+                if (!reportData.quarterlyYoY) return;
+                createOrUpdateChart('quarterlyYoYChart', {
+                    type: 'bar',
+                    data: { 
+                        labels: reportData.quarterlyYoY.labels, 
+                        datasets: [
+                            ...reportData.quarterlyYoY.sales_datasets.map((d,i)=>({...d, yAxisID: 'ySales', backgroundColor: chartColors[i % chartColors.length]})), 
+                            ...reportData.quarterlyYoY.yoy_datasets.map((d,i)=>({...d, type:'line', yAxisID: 'yYoY', borderColor: chartColors[i % chartColors.length], datalabels: { display: true, align: 'top', color: '#444', font: { weight: 'bold' }, formatter: (value) => (typeof value === 'number' ? value + '%' : null) } }))
+                        ] 
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { ySales: { position:'left', title:{text:'销售额', display:true}}, yYoY:{position:'right', title:{text:'同比增长(%)', display:true}, grid:{drawOnChartArea:false}} }, plugins: {title:{display:true, text:'季度销售额与同比增长'}} }
+                });
+            }
+           
+            function setupParetoChart() {
+                if (!reportData.paretoAnalysis) return;
+                createOrUpdateChart('paretoChart', {
+                    type: 'bar',
+                    data: { labels: reportData.paretoAnalysis.labels, datasets: [ { label: '销售额', data: reportData.paretoAnalysis.sales, yAxisID: 'y-sales', backgroundColor: chartColors[0] }, { type: 'line', label: '累计百分比', data: reportData.paretoAnalysis.cumulative_pct, yAxisID: 'y-pct', borderColor: chartColors[2] } ] },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { 'y-sales': { position: 'left', title: {display: true, text: '销售额'} }, 'y-pct': { position: 'right', max: 105, title: {display: true, text: '累计份额 (%)'}, ticks: { callback: v => `${v}%` }, grid: { drawOnChartArea: false } } } }
+                });
+            }
+
+            function setupShareModule() {
+                if (!reportData.shareAnalysis) return;
+                populateSelect('share-filter', reportData.product_types, 'Overall');
+                const updateShareChart = () => {
+                    const dimension = document.getElementById('share-dimension-selector').value;
+                    const pType = document.getElementById('share-filter').value;
+                    const data = reportData.shareAnalysis?.[dimension]?.[pType];
+                    createOrUpdateChart('shareAnalysisChart', {
+                        type: 'bar',
+                        data: data ? { ...data, datasets: data.datasets.map((ds,i) => ({...ds, backgroundColor: chartColors[i % chartColors.length]})) } : null,
+                        options: { 
+                            responsive: true, maintainAspectRatio: false, 
+                            scales: { x: { stacked: true }, y: { stacked: true, min: 0, max: 100, ticks: { callback: v => v ? `${v.toFixed(0)}%` : '0%' } } }, 
+                            plugins: { 
+                                title: { display: true, text: `市场份额 - ${pType} (按 ${dimension} 划分)` },
+                                datalabels: { display: true, color: 'white', font: { weight: 'bold' }, formatter: (value) => (value > 3 ? value.toFixed(1) + '%' : null) },
+                                tooltip: { callbacks: {
+                                    label: function(context) {
+                                        const dataset = context.dataset; const dataIndex = context.dataIndex; const label = dataset.label || '';
+                                        const percentage = context.formattedValue + '%'; const absoluteValue = dataset.absoluteData[dataIndex]; 
+                                        const formattedAbsolute = Math.round(absoluteValue).toLocaleString('en-US');
+                                        return `${label}: ${percentage} (${formattedAbsolute})`;
+                                    }
+                                }}
+                            } 
+                        }
+                    });
+                };
+                document.getElementById('share-dimension-selector').addEventListener('change', updateShareChart);
+                document.getElementById('share-filter').addEventListener('change', updateShareChart);
+                updateShareChart();
+            }
+
+            function setupGrowthModule() {
+                if (!reportData.growthTables) return;
+                populateSelect('table-filter', reportData.product_types, 'Overall');
+                const updateGrowthTable = () => {
+                    const dimension = document.getElementById('table-dimension-selector').value;
+                    const pType = document.getElementById('table-filter').value;
+                    renderTable('growthTableContainer', reportData.growthTables?.[dimension]?.[pType]);
+                };
+                document.getElementById('table-dimension-selector').addEventListener('change', updateGrowthTable);
+                document.getElementById('table-filter').addEventListener('change', updateGrowthTable);
+                updateGrowthTable();
+            }
+  
+            function setupStrategicBubbleChart() {
+                const strategicData = reportData.strategicPositioning;
+                const typeFilter = document.getElementById('strategic-type-filter');
+                const dimFilter = document.getElementById('strategic-dimension-filter');
+                const container = document.getElementById('strategicBubbleChart')?.parentElement;
+
+                if (!strategicData || Object.keys(strategicData).length === 0) {
+                    if (container) container.innerHTML = '<div class="error-message">战略定位图表数据不足。</div>';
+                    return;
+                }
+                
+                // 核心的图表更新函数
+                function updateView() {
+                    const selectedType = typeFilter.value;
+                    const selectedDim = dimFilter.value;
+                    
+                    const dataForChart = strategicData[selectedType]?.[selectedDim];
+
+                    if (!dataForChart || dataForChart.length === 0) {
+                        if (container) container.innerHTML = `<div class="error-message">“${selectedType} - ${selectedDim}”下无足够数据。</div>`;
+                        if (charts.strategicBubbleChart) charts.strategicBubbleChart.destroy();
+                        return;
+                    }
+                    
+                    // 使用深拷贝，防止修改原始数据对后续重绘造成影响
+                    const data = JSON.parse(JSON.stringify(dataForChart));
+                    
+                    // 预处理数据：计算半径和颜色范围
+                    const salesData = data.map(d => d.r);
+                    const maxSales = Math.max(...salesData, 1); // 避免数据为空时出错
+                    const contribData = data.map(d => d.contrib).filter(c => !isNaN(c));
+                    const minContrib = Math.min(...contribData, 0);
+                    const maxContrib = Math.max(...contribData, 0);
+
+                    data.forEach(d => {
+                        d.r = (d.r / maxSales) * 50 + 5; // 将半径缩放到 5 到 55 之间
+                    });
+                    
+                    // 定义图表数据集
+                    const chartData = {
+                        datasets: [{
+                            label: `${selectedDim} (${selectedType})`,
+                            data: data,
+                            backgroundColor: function(context) {
+                                const bubble = context.raw;
+                                if (bubble.contrib < 0) {
+                                    const alpha = (minContrib !== 0) ? (bubble.contrib / minContrib) * 0.7 + 0.3 : 0.3;
+                                    return `rgba(220, 53, 69, ${alpha})`; // 红色代表负贡献
+                                }
+                                const range = maxContrib - minContrib;
+                                const alpha = (range > 0) ? ((bubble.contrib - minContrib) / range) * 0.7 + 0.3 : 0.3;
+                                return `rgba(13, 110, 253, ${alpha})`; // 蓝色代表正贡献
+                            },
+                        }]
+                    };
+
+                    // 定义完整的图表配置
+                    const chartConfig = {
+                        type: 'bubble',
+                        data: chartData,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { title: { display: true, text: '市场份额 (%)' } },
+                                y: { title: { display: true, text: '同比增长率 (%)' } }
+                            },
+                            plugins: {
+                                title: { display: true, text: `市场表现矩阵 (${selectedType})` },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const d = context.raw;
+                                            // 【已修正】从正确的、动态的维度路径寻找原始数据
+                                            const originalBubble = reportData.strategicPositioning[selectedType]?.[selectedDim]?.find(item => item.label === d.label);
+
+                                            if (originalBubble) {
+                                                const salesText = originalBubble.r.toLocaleString('en-US');
+                                                return `${d.label}: 份额 ${d.x}%, 增长 ${d.y}%, 贡献 ${d.contrib}%, 年销售额 ${salesText}`;
+                                            }
+                                            return '数据加载错误';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    };
+                    
+                    // 调用统一的图表创建/更新函数
+                    createOrUpdateChart('strategicBubbleChart', chartConfig);
+                }
+
+                // 首次加载时，填充两个下拉菜单
+                if (typeFilter.options.length === 0) {
+                    (reportData.product_types || Object.keys(strategicData)).forEach(pType => {
+                        typeFilter.add(new Option(pType, pType));
+                    });
+                }
+                if (dimFilter.options.length === 0 && strategicData['Overall']) {
+                    Object.keys(strategicData['Overall']).forEach(dimKey => {
+                        const displayName = `${dimKey.replace(/_/g, ' & ').replace(/\b\w/g, l => l.toUpperCase())}`;
+                        dimFilter.add(new Option(displayName, dimKey));
+                    });
+                }
+                
+                // 绑定事件，当任一下拉菜单变化时，都调用更新函数
+                typeFilter.onchange = updateView;
+                dimFilter.onchange = updateView;
+
+                // 页面首次加载时，运行一次更新函数来绘制初始图表
+                updateView();
+            }
+            
+
+
+            function renderForecastBreakdownTable(containerId, tableData) {
+                const container = document.getElementById(containerId);
+                if (!container || !tableData || !tableData.rows || tableData.rows.length === 0) {
+                    if (container) container.innerHTML = '<p class="text-center text-muted mt-4">无详细预测数据可供展示</p>';
+                    return;
+                }
+
+                let html = `<div class="table-responsive"><table class="table table-sm table-striped table-hover">`;
+                // 创建表头
+                html += `<thead class="table-light" style="position: sticky; top: 0;"><tr>${tableData.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
+                
+                // 创建表身
+                html += `<tbody>`;
+                tableData.rows.forEach(row => {
+                    html += '<tr>';
+                    tableData.headers.forEach(header => {
+                        // JS查找数据时，需要将美化后的表头转回原始的、无空格小写的列名
+                        const rawHeader = header.toLowerCase().replace(/ /g, '_');
+                        const rawValue = row[rawHeader];
+                        
+                        let displayValue = '-';
+                        if (header.toLowerCase() === 'ds') {
+                            displayValue = rawValue; // ds已经是字符串，直接显示
+                        } else if (rawValue !== null && rawValue !== undefined && !isNaN(rawValue)) {
+                            displayValue = Math.round(rawValue).toLocaleString('en-US');
+                        }
+                        html += `<td>${displayValue}</td>`;
+                    });
+                    html += '</tr>';
+                });
+                html += `</tbody></table></div>`;
+                container.innerHTML = html;
+            }
+            
+            function setupForecastBreakdownTable() {
+                const forecastData = reportData.salesForecast;
+                const tableFilter = document.getElementById('breakdown-table-filter');
+
+                if (!forecastData || Object.keys(forecastData).length === 0) return;
+                
+                // 核心的表格更新函数
+                const updateTableView = () => {
+                    const selectedType = tableFilter.value;
+                    const data = forecastData[selectedType];
+                    if (data && data.breakdown_table) {
+                        renderForecastBreakdownTable('forecastBreakdownContainer_independent', data.breakdown_table);
+                    }
+                };
+                
+                // 首次加载时，填充下拉菜单
+                if (tableFilter.options.length === 0) {
+                    (reportData.product_types || Object.keys(forecastData)).forEach(pType => {
+                        tableFilter.add(new Option(pType, pType));
+                    });
+                }
+
+                // 绑定事件
+                tableFilter.onchange = updateTableView;
+
+                // 首次加载
+                updateTableView();
+            }
+
+
+           
+            // 一维度气泡分析
+            // function setupStrategicBubbleChart() {
+            //     if (!reportData.strategicPositioning || !reportData.strategicPositioning.pricerange_bubble) {
+            //         document.getElementById('strategicBubbleChart').parentElement.innerHTML = '<div class="error-message">战略定位图表数据不足。</div>';
+            //         return;
+            //     }
+
+            //     const data = reportData.strategicPositioning.pricerange_bubble;
+                
+            //     // 1. 预处理数据，转换销售额为半径，并找到贡献度的范围
+            //     const salesData = data.map(d => d.r);
+            //     const maxSales = Math.max(...salesData, 1); // 避免数据为空时出错
+            //     const contribData = data.map(d => d.contrib).filter(c => !isNaN(c));
+            //     const minContrib = Math.min(...contribData, 0);
+            //     const maxContrib = Math.max(...contribData, 0);
+
+            //     data.forEach(d => {
+            //         d.r = (d.r / maxSales) * 50 + 5; // 半径在5到55之间
+            //     });
+                
+            //     // 2. 配置数据集，backgroundColor 现在是一个函数
+            //     const chartData = {
+            //         datasets: [{
+            //             label: '价格区间',
+            //             data: data,
+            //             backgroundColor: function(context) {
+            //                 const bubble = context.raw;
+            //                 const contrib = bubble.contrib;
+            //                 const range = maxContrib - minContrib;
+                            
+            //                 // 如果贡献度是负的（拖累增长），显示红色
+            //                 if (contrib < 0) {
+            //                     const alpha = (minContrib !== 0) ? (contrib / minContrib) * 0.7 + 0.3 : 0.3;
+            //                     return `rgba(220, 53, 69, ${alpha})`; // 红色
+            //                 }
+                            
+            //                 // 如果贡献度是正的，显示蓝色，贡献越大颜色越深
+            //                 const alpha = (range > 0) ? ((contrib - minContrib) / range) * 0.7 + 0.3 : 0.3;
+            //                 return `rgba(13, 110, 253, ${alpha})`; // 蓝色
+            //             },
+            //         }]
+            //     };
+
+            //     // 3. 渲染图表，并更新 tooltip
+            //     createOrUpdateChart('strategicBubbleChart', {
+            //         type: 'bubble',
+            //         data: chartData,
+            //         options: {
+            //             responsive: true,
+            //             maintainAspectRatio: false,
+            //             scales: {
+            //                 x: { title: { display: true, text: '市场份额 (%)' } },
+            //                 y: { title: { display: true, text: '同比增长率 (%)' } }
+            //             },
+            //             plugins: {
+            //                 title: { display: true, text: '各价格区间的市场地位与增长潜力' },
+            //                 tooltip: {
+            //                     callbacks: {
+            //                         label: function(context) {
+            //                             const d = context.raw;
+            //                             // 从原始数据中获取未处理的销售额
+            //                             const originalSales = reportData.strategicPositioning.pricerange_bubble.find(item => item.label === d.label).r;
+            //                             return `${d.label}: 份额 ${d.x}%, 增长 ${d.y}%, 贡献 ${d.contrib}%, 年销售额 ${originalSales.toLocaleString('en-US')}`;
+            //                         }
+            //                     }
+            //                 }
+            //             }
+            //         }
+            //     });
+            // }
+         
+
+
+            function setupStarProductChart() {
+                if (!reportData.starProductAnalysis) return;
+                
+                const filterSelect = document.getElementById('star-product-filter');
+                const timeSlider = document.getElementById('time-slider');
+                const timeLabel = document.getElementById('time-slider-label');
+                let availableQuarters = [];
+                let productPaths = {};
+                let selectedASIN = null;
+
+                const update = () => {
+                    selectedASIN = null;
+                    const pType = filterSelect.value;
+                    const quarterData = reportData.starProductAnalysis[pType];
+                    
+                    if (!quarterData || Object.keys(quarterData).length === 0) {
+                        document.getElementById('starProductChart').parentElement.innerHTML = `<div class="error-message">当前筛选 [${pType}] 的明星产品数据不足。</div>`;
+                        timeSlider.style.display = 'none';
+                        timeLabel.textContent = '';
+                        return;
+                    }
+
+                    availableQuarters = Object.keys(quarterData).sort();
+                    
+                    productPaths[pType] = {};
+                    availableQuarters.forEach(q => {
+                        quarterData[q].points.forEach(p => {
+                            if (!productPaths[pType][p.label]) productPaths[pType][p.label] = [];
+                            productPaths[pType][p.label].push({ ...p, quarter: q });
+                        });
+                    });
+                    
+                    timeSlider.max = availableQuarters.length - 1;
+                    if(timeSlider.value > timeSlider.max || timeSlider.value === "" || !timeSlider.value) {
+                       timeSlider.value = timeSlider.max;
+                    }
+                    timeSlider.style.display = 'block';
+                    renderChartForQuarter();
+                };
+
+                const renderChartForQuarter = () => {
+                    const pType = filterSelect.value;
+                    const selectedQuarter = availableQuarters[timeSlider.value];
+                    timeLabel.textContent = selectedQuarter;
+                    
+                    const data = reportData.starProductAnalysis[pType][selectedQuarter];
+                    
+                    // --- 关键修正点: 将数据点按is_stable和is_new分组 ---
+                    const stableMatureProducts = data.points.filter(p => !p.is_new && p.is_stable);
+                    const dynamicMatureProducts = data.points.filter(p => !p.is_new && !p.is_stable);
+                    const newProducts = data.points.filter(p => p.is_new);
+                    
+                    const datasets = [
+                        { 
+                            label: '动态产品', 
+                            data: dynamicMatureProducts, 
+                            pointStyle: 'circle',
+                            radius: 5,
+                            backgroundColor: selectedASIN ? 'rgba(127, 128, 186, 0.15)' : 'rgba(127, 128, 186, 0.7)'
+                        },
+                        { 
+                            label: '稳定产品', 
+                            data: stableMatureProducts,
+                            pointStyle: 'circle',
+                            radius: 5,
+                            backgroundColor: selectedASIN ? 'rgba(255, 205, 86, 0.15)' : 'rgba(255, 205, 86, 0.7)' 
+                        },
+                        {
+                            label: '新品',
+                            data: newProducts,
+                            pointStyle: 'triangle',
+                            radius: 5,
+                            backgroundColor: selectedASIN ? 'rgba(220, 53, 69, 0.15)' : 'rgba(220, 53, 69, 0.7)'
+                        }
+                    ];
+                    
+                    let annotations = {};
+                    if(data.baseline_available) {
+                        annotations = {
+                            avgGrowthLine: { type: 'line', xMin: data.avg_growth, xMax: data.avg_growth, borderColor: '#dc3545', borderWidth: 2, label: { content: `增长趋势中位数: ${data.avg_growth.toFixed(2)}`, display: true, position: 'end', yAdjust: -10, backgroundColor: 'rgba(255, 255, 255, 0.7)', color: 'black', font: {size: 11}, padding: 4 } },
+                            avgSalesLine: { type: 'line', yMin: data.avg_sales, yMax: data.avg_sales, borderColor: '#0d6efd', borderWidth: 2, label: { content: `销售额中位数: ${(data.avg_sales/10000).toFixed(2)}万`, display: true, position: 'start', xAdjust: 10, backgroundColor: 'rgba(255, 255, 255, 0.7)', color: 'black', font: {size: 11}, padding: 4 } },
+                            starLabel: { type: 'label', xValue: data.avg_growth, yValue: data.avg_sales, xAdjust: 15, yAdjust: -15,  font: {size: 14}, color: 'rgba(0,0,0,0.5)'},
+                            cashCowLabel: { type: 'label', xValue: data.avg_growth, yValue: data.avg_sales, xAdjust: -15, yAdjust: -15, font: {size: 14}, color: 'rgba(0,0,0,0.5)', textAlign: 'right'},
+                            questionLabel: { type: 'label', xValue: data.avg_growth, yValue: data.avg_sales, xAdjust: 15, yAdjust: 15,  font: {size: 14}, color: 'rgba(0,0,0,0.5)', textBaseline: 'bottom'},
+                            dogLabel: { type: 'label', xValue: data.avg_growth, yValue: data.avg_sales, xAdjust: -15, yAdjust: 15,  font: {size: 14}, color: 'rgba(0,0,0,0.5)', textAlign: 'right', textBaseline: 'bottom'},
+                            meanGrowthLine: { type: 'line', xMin: data.mean_growth, xMax: data.mean_growth, borderColor: '#dc3545', borderWidth: 1, borderDash: [5, 5],label: { content: `平均值: ${data.mean_growth.toFixed(2)}`, display: true,position: 'start', yAdjust: 10, font: {size: 10}, color: '#dc3545'}},
+                            meanSalesLine: {type: 'line', yMin: data.mean_sales, yMax: data.mean_sales,borderColor: '#0d6efd', borderWidth: 1, borderDash: [5, 5],label: {content: `平均值: ${(data.mean_sales/10000).toFixed(2)}万`, display: true,position: 'end', xAdjust: -10, font: {size: 10}, color: '#0d6efd'}}, 
+                            p25GrowthLine: {type: 'line', xMin: data.growth_p25, xMax: data.growth_p25,borderColor: '#dc3545', borderWidth: 1, borderDash: [6, 6],label: { content: `P25: ${data.growth_p25.toFixed(2)}`, display: true, position: 'end', yAdjust: 10, font: {size: 10}, backgroundColor: 'rgba(255, 255, 255, 0.7)', color: 'black' }},
+                            p75GrowthLine: {type: 'line', xMin: data.growth_p75, xMax: data.growth_p75,borderColor: '#dc3545', borderWidth: 1, borderDash: [6, 6],label: { content: `P75: ${data.growth_p75.toFixed(2)}`, display: true, position: 'end', yAdjust: 10, xAdjust: 15, font: {size: 10}, backgroundColor: 'rgba(255, 255, 255, 0.7)', color: 'black' }},
+                        
+                        };
+                    }
+
+                    if (selectedASIN && productPaths[pType][selectedASIN]) {
+                        const path = productPaths[pType][selectedASIN];
+                        
+                        datasets.push({
+                            type: 'line', label: '轨迹线', data: path,
+                            borderColor: '#007bff', borderWidth: 2, pointRadius: 0, tension: 0.1
+                        });
+
+                        datasets.push({
+                            label: '轨迹点', data: path, pointStyle: 'circle',
+                            radius: 10, backgroundColor: 'white', borderColor: '#007bff', borderWidth: 2,
+                            datalabels: {
+                                display: true, color: '#007bff', font: { weight: 'bold' },
+                                formatter: (value, context) => context.dataIndex + 1
+                            }
+                        });
+
+                        const highlightedPoint = path.find(p => p.quarter === selectedQuarter);
+                        if(highlightedPoint){
+                            datasets.push({
+                                label: `当前: ${selectedASIN}`, data: [highlightedPoint],
+                                pointStyle: highlightedPoint.is_new ? 'triangle' : 'circle',
+                                radius: highlightedPoint.is_new ? 10 : 8,
+                                backgroundColor: highlightedPoint.is_new ? 'rgba(220, 53, 69, 1)' : (highlightedPoint.is_stable ? 'rgba(108, 117, 125, 1)' : 'rgba(127, 128, 186, 1)'),
+                                borderColor: 'white', borderWidth: 2
+                            });
+                        }
+                    }
+
+                    createOrUpdateChart('starProductChart', {
+                        type: 'scatter', data: { datasets: datasets },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            onClick: (event, elements) => {
+                                const chart = charts.starProductChart;
+                                if (elements.length > 0) {
+                                    const pointElement = elements[0];
+                                    const datasetLabel = chart.data.datasets[pointElement.datasetIndex].label;
+                                    if(['动态产品', '稳定产品', '新品'].includes(datasetLabel)){
+                                        const asin = chart.data.datasets[pointElement.datasetIndex].data[pointElement.index].label;
+                                        selectedASIN = (selectedASIN === asin) ? null : asin;
+                                    }
+                                } else {
+                                    selectedASIN = null;
+                                }
+                                renderChartForQuarter();
+                            },
+                            scales: {
+                                x: { title: { display: true, text: '销售趋势得分 (稳健回归)' }, grid: { display: true, color: '#eee' } },
+                                y: { title: { display: true, text: '近4季度平均销售额' }, ticks: { callback: v => (v/10000).toFixed(2) + '万' } }
+                            },
+                            plugins: {
+                                legend: { labels: { usePointStyle: true, filter: item => item.text && !['轨迹点', '当前', '轨迹线'].includes(item.text) } },
+                                tooltip: { callbacks: {
+                                    label: function(context) {
+                                        const point = context.raw;
+                                        const type = point.is_new ? `新品 (${point.new_type || ''})` : `成熟产品 ${point.is_stable ? '(稳定)' : '(动态)'}`;
+                                        return [`ASIN: ${point.label}`, `类型: ${type}`, `近4季度平均销售额: ${point.y.toLocaleString('en-US')}`, `趋势得分: ${point.x}`];
+                                    }
+                                }},
+                                annotation: { annotations: annotations }
+                            }
+                        }
+                    });
+                };
+            
+                populateSelect('star-product-filter', reportData.product_types, 'Overall');
+                filterSelect.addEventListener('change', update);
+                timeSlider.addEventListener('input', renderChartForQuarter);
+                update();
+            }
+
+            // --- 初始化所有模块 ---
+            setupForecastModule();
+            setupQuarterlyYoYChart();
+            setupParetoChart();
+            setupShareModule();
+            setupGrowthModule();
+            setupKpiTimelineChart();
+            setupStarProductChart();
+            setupStrategicBubbleChart();
+            setupForecastBreakdownTable();
+            
+        });
+    </script>
+</body>
+</html>
