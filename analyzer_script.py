@@ -78,7 +78,7 @@ class SalesAnalyzer:
         print("✅ 数据加载与预处理成功。")
         return True
 
-    def run_analysis(self):
+    def prepare_and_get_data(self):
         """
         执行所有分析，并将结果存入 self.dashboard_data
         """
@@ -465,17 +465,7 @@ class SalesAnalyzer:
                     print(f"❌ 为 '{p_type}' 的 '{dim_key}' 维度生成气泡图时发生错误: {e}")
                     strategic_positioning_data[p_type][dim_key] = []
 
-        # return {
-        #     "product_types": product_types, "time_events": dynamic_time_events, "salesForecast": forecast_data,
-        #     "quarterlyYoY": quarterly_yoy_data, "shareAnalysis": share_data, "growthTables": table_data,
-        #     "paretoAnalysis": pareto_data,
-        #     "starProductAnalysis": star_product_analysis,
-        #     "structuralKpis": structural_kpis,
-        #     "strategicPositioning": strategic_positioning_data
-        # }
-
-        # 将所有计算结果存入实例变量
-        self.dashboard_data = {
+        return {
             "product_types": product_types, "time_events": dynamic_time_events, "salesForecast": forecast_data,
             "quarterlyYoY": quarterly_yoy_data, "shareAnalysis": share_data, "growthTables": table_data,
             "paretoAnalysis": pareto_data,
@@ -483,6 +473,16 @@ class SalesAnalyzer:
             "structuralKpis": structural_kpis,
             "strategicPositioning": strategic_positioning_data
         }
+
+        # 将所有计算结果存入实例变量
+        # self.dashboard_data = {
+        #     "product_types": product_types, "time_events": dynamic_time_events, "salesForecast": forecast_data,
+        #     "quarterlyYoY": quarterly_yoy_data, "shareAnalysis": share_data, "growthTables": table_data,
+        #     "paretoAnalysis": pareto_data,
+        #     "starProductAnalysis": star_product_analysis,
+        #     "structuralKpis": structural_kpis,
+        #     "strategicPositioning": strategic_positioning_data
+        # }
 
         print("\n✅ 核心分析流程全部完成！")
         return True
@@ -521,3 +521,4 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
