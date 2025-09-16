@@ -510,6 +510,7 @@ class SalesAnalyzer:
             self.df = pd.read_excel(file_path)
             print(f"  - 初始加载了 {len(self.df)} 行数据")
         except Exception as e:
+            # 修复：确保在返回前打印错误和Traceback
             print(f"❌ {e}")
             traceback.print_exc()
             return False
@@ -576,7 +577,6 @@ class SalesAnalyzer:
             monthly_sales = df_filtered.set_index(date_col)[sales_col].resample('M').sum()
 
             if len(monthly_sales) < 24:
-                print(f"⚠️ {p_type} 类型数据不足24个月，跳过SARIMAX预测。")
                 continue
 
             try:
@@ -966,9 +966,6 @@ class SalesAnalyzer:
             "structuralKpis": structural_kpis,
             "strategicPositioning": strategic_positioning_data
         }
-
-
-
 
 
 
