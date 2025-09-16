@@ -481,7 +481,6 @@
 #             "structuralKpis": structural_kpis,
 #             "strategicPositioning": strategic_positioning_data
 #         }
-
 import pandas as pd
 import numpy as np
 from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -509,29 +508,48 @@ class SalesAnalyzer:
         try:
             self.df = pd.read_excel(file_path)
             print(f"  - 初始加载了 {len(self.df)} 行数据")
+            print(f"  - 成功加载的列名: {self.df.columns.tolist()}")
         except Exception as e:
-            # 修复：确保在返回前打印错误和Traceback
-            print(f"❌ {e}")
+            print(f"❌ 无法加载或解析 Excel 文件: {e}")
             traceback.print_exc()
             return False
 
         date_col = cols['date']
         try:
             self.df[date_col] = pd.to_datetime(self.df[date_col], format='%Y%m')
-            print("日期成功按 'YYYYMM' 格式解析。")
+            print("✅ 日期成功按 'YYYYMM' 格式解析。")
         except (ValueError, TypeError):
-            print("按 'YYYYMM' 格式解析失败，正在尝试自动识别标准日期格式...")
-            self.df[date_col] = pd.to_datetime(self.df[date_col], errors='coerce')
+            print("⚠️ 按 'YYYYMM' 格式解析失败，正在尝试自动识别标准日期格式...")
+            try:
+                self.df[date_col] = pd.to_datetime(self.df[date_col], errors='coerce')
+                print("✅ 日期成功自动识别。")
+            except Exception as e:
+                print(f"❌ 日期列处理失败: {e}")
+                traceback.print_exc()
+                return False
 
         self.df.dropna(subset=[date_col], inplace=True)
         print(f"  - 清理无效日期后，剩下 {len(self.df)} 行数据")
         if not self.df.empty:
             unique_quarters = self.df[date_col].dt.to_period('Q').nunique()
             print(f"  - 剩余数据覆盖了 {unique_quarters} 个不重复的季度")
+        
+        # 在这里检查关键列是否存在，以防止KeyError
+        required_cols = [cols['date'], cols['sales'], cols['type'], cols['asin']]
+        for required_col in required_cols:
+            if required_col not in self.df.columns:
+                print(f"❌ 缺少关键列: '{required_col}'。请检查上传文件的列名。")
+                return False
 
         sales_col = cols['sales']
-        self.df[sales_col] = pd.to_numeric(self.df[sales_col], errors='coerce').fillna(0)
-        self.df.sort_values(date_col, inplace=True)
+        try:
+            self.df[sales_col] = pd.to_numeric(self.df[sales_col], errors='coerce').fillna(0)
+            self.df.sort_values(date_col, inplace=True)
+            print("✅ 销售额列处理成功。")
+        except Exception as e:
+            print(f"❌ 销售额列处理失败: {e}")
+            traceback.print_exc()
+            return False
 
         if self.df.empty:
             print("⚠️ 警告: 处理后没有剩下有效的数据。")
@@ -539,7 +557,13 @@ class SalesAnalyzer:
 
         first_listed_date_col = cols.get('first_listed_date')
         if first_listed_date_col and first_listed_date_col in self.df.columns:
-            self.df[first_listed_date_col] = pd.to_datetime(self.df[first_listed_date_col], errors='coerce')
+            try:
+                self.df[first_listed_date_col] = pd.to_datetime(self.df[first_listed_date_col], errors='coerce')
+                print("✅ 上架时间列处理成功。")
+            except Exception as e:
+                print(f"❌ 上架时间列处理失败: {e}")
+                traceback.print_exc()
+                return False
 
         print("✅ 数据加载与预处理成功。")
         return True
@@ -966,7 +990,6 @@ class SalesAnalyzer:
             "structuralKpis": structural_kpis,
             "strategicPositioning": strategic_positioning_data
         }
-
 
 
 
