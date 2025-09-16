@@ -120,6 +120,7 @@
             } catch (error) { document.body.innerHTML = '<div class="alert alert-danger m-5"><h1>加载数据失败</h1><p>无法解析数据。</p></div>'; return; }
 
             Chart.register(ChartDataLabels);
+            Chart.register(ChartJsAnnotation);
             Chart.defaults.scale.grid.display = false;
             Chart.defaults.plugins.datalabels.display = false;
             
