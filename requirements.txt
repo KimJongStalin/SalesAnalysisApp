@@ -1,6 +1,6 @@
 Flask
 pandas
-numpy
-statsmodels
-scipy
+openpyxl
 gunicorn
+statsmodels
+prophet
