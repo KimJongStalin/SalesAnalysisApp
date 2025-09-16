@@ -72,7 +72,7 @@ from analyzer_script import SalesAnalyzer
 
 app = Flask(__name__)
 # 配置上传文件夹为 /tmp 
-UPLOAD_FOLDER = '/tmp'
+UPLOAD_FOLDER = '/mnt/uploads'
 ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -132,6 +132,7 @@ def upload_file():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+
 
 
 
