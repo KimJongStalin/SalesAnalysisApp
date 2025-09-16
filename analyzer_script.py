@@ -990,8 +990,3 @@ class SalesAnalyzer:
             "structuralKpis": structural_kpis,
             "strategicPositioning": strategic_positioning_data
         }
-
-
-
-
-
