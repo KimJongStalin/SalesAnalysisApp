@@ -69,10 +69,10 @@
             <div class="section-header d-flex justify-content-between align-items-center">
                 <h2>整合市场份额分析(季度, %)</h2>
                 <div class="controls d-flex">
+                     <select id="share-filter" class="form-select"></select>
+                    </select>
                     <select id="share-dimension-selector" class="form-select">
                         <option value="brand">按品牌</option> <option value="packsize">按数量</option> <option value="pricerange">按价格段</option> <option value="tiptype">按笔头</option>
-                    </select>
-                    <select id="share-filter" class="form-select"></select>
                 </div>
             </div>
             <div class="chart-container" style="min-height: 600px;"><canvas id="shareAnalysisChart"></canvas></div>
@@ -98,9 +98,9 @@
             <div class="section-header d-flex justify-content-between align-items-center">
                 <h2>整合增长表</h2>
                 <div class="controls d-flex">
-                    <select id="table-dimension-selector" class="form-select">
-                    </select>
                     <select id="table-filter" class="form-select"></select>
+                    </select>
+                    <select id="table-dimension-selector" class="form-select"> 
                 </div>
             </div>
             <div id="growthTableContainer" class="table-container" style="min-height: 0;"></div>
