@@ -1069,6 +1069,42 @@ class SalesAnalyzer:
                 except Exception as e:
                     print(f"❌ 为 '{p_type}' 的 '{dim_key}' 维度生成气泡图时发生错误: {e}")
                     strategic_positioning_data[p_type][dim_key] = []
+        # print("--- 正在计算市场份额 ---")
+        # share_data = {}
+        # share_dimensions_to_run = [k for k, v in table_dimensions.items() if len(v) == 1]
+        # for dim_key in share_dimensions_to_run:
+        #   dim_col_name = cols.get(dim_key)
+        #   if not dim_col_name or dim_col_name not in self.df.columns: continue
+        #   share_data[dim_key] = {}
+        #   for p_type in product_types:
+        #     df_filtered = self.df if p_type == "Overall" else self.df[self.df[type_col] == p_type]
+        #     if df_filtered.empty: continue
+
+        #     freq = 'QE'
+        #     time_format = '%YQ%q'
+        #     top_n = 20
+
+        #     if dim_key == 'brand' and df_filtered[dim_col_name].nunique() > top_n:
+        #       total_sales = df_filtered.groupby(dim_col_name)[sales_col].sum()
+        #       top_brands = total_sales.nlargest(top_n).index.tolist()
+        #       df_with_others = df_filtered.copy()
+        #       df_with_others[dim_col_name] = df_with_others[dim_col_name].apply(lambda x: x if x in top_brands else '其他 (Others)')
+        #       data = df_with_others.groupby([pd.Grouper(key=date_col, freq=freq), dim_col_name])[sales_col].sum().unstack(dim_col_name).fillna(0)
+        #     else:
+        #       data = df_filtered.groupby([pd.Grouper(key=date_col, freq=freq), dim_col_name])[sales_col].sum().unstack(dim_col_name).fillna(0)
+            
+        #     if data.empty: continue
+        #     if '其他 (Others)' in data.columns:
+        #       other_col = data.pop('其他 (Others)')
+        #       data['其他 (Others)'] = other_col
+            
+        #     sorted_columns = data.sum().sort_values(ascending=False).index
+        #     data_sorted = data[sorted_columns]
+        #     data_sum = data_sorted.sum(axis=1)
+        #     safe_data_sum = data_sum.where(data_sum != 0, 1)
+        #     data_pct_sorted = data_sorted.div(safe_data_sum, axis=0) * 100
+        #     datasets = [{"label": str(col), "data": data_pct_sorted[col].round(1).tolist(), "absoluteData": data_sorted[col].round(0).tolist()} for col in data_sorted.columns]
+        #     share_data[dim_key][p_type] = { "labels": data_pct_sorted.index.to_period(freq.replace('E', '')).strftime(time_format).tolist(), "datasets": datasets }
         print("--- 正在计算市场份额 ---")
         share_data = {}
         share_dimensions_to_run = [k for k, v in table_dimensions.items() if len(v) == 1]
@@ -1084,16 +1120,16 @@ class SalesAnalyzer:
             time_format = '%YQ%q'
             top_n = 20
 
-            if dim_key == 'brand' and df_filtered[dim_col_name].nunique() > top_n:
+            if df_filtered[dim_col_name].nunique() > top_n: # 如果当前维度的唯一值数量 > 20，则自动启用Top N逻辑
               total_sales = df_filtered.groupby(dim_col_name)[sales_col].sum()
-              top_brands = total_sales.nlargest(top_n).index.tolist()
+              top_items = total_sales.nlargest(top_n).index.tolist()
               df_with_others = df_filtered.copy()
-              df_with_others[dim_col_name] = df_with_others[dim_col_name].apply(lambda x: x if x in top_brands else '其他 (Others)')
-              data = df_with_others.groupby([pd.Grouper(key=date_col, freq=freq), dim_col_name])[sales_col].sum().unstack(dim_col_name).fillna(0)
+              df_with_others[dim_col_name] = df_with_others[dim_col_name].apply(lambda x: x if x in top_items else '其他 (Others)')
+              data = df_with_others.groupby([pd.Grouper(key=date_col, freq=freq), dim_col_name])[sales_col].sum().unstack(dim_col_name).fillna(0)   
             else:
               data = df_filtered.groupby([pd.Grouper(key=date_col, freq=freq), dim_col_name])[sales_col].sum().unstack(dim_col_name).fillna(0)
-            
             if data.empty: continue
+
             if '其他 (Others)' in data.columns:
               other_col = data.pop('其他 (Others)')
               data['其他 (Others)'] = other_col
@@ -1105,8 +1141,7 @@ class SalesAnalyzer:
             data_pct_sorted = data_sorted.div(safe_data_sum, axis=0) * 100
             datasets = [{"label": str(col), "data": data_pct_sorted[col].round(1).tolist(), "absoluteData": data_sorted[col].round(0).tolist()} for col in data_sorted.columns]
             share_data[dim_key][p_type] = { "labels": data_pct_sorted.index.to_period(freq.replace('E', '')).strftime(time_format).tolist(), "datasets": datasets }
-
-
+     
         return {
             "product_types": product_types, "time_events": dynamic_time_events, "salesForecast": forecast_data,
             "quarterlyYoY": quarterly_yoy_data, "shareAnalysis": share_data, "growthTables": table_data,
@@ -1163,6 +1198,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
