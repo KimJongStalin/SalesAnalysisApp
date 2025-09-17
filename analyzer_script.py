@@ -42,10 +42,10 @@
 
 #     def load_and_preprocess_data(self) -> bool:
 #         file_path = self.config.get('input_filepath')
-#         cols = self.config['columns']
-#         print(f"\n--- 正在从 '{file_path}' 加载数据 ---")
-#         try:
-#             self.df = pd.read_excel(file_path)
+        # cols = self.config['columns']
+        # print(f"\n--- 正在从 '{file_path}' 加载数据 ---")
+        # try:
+        #     self.df = pd.read_excel(file_path)
 #             print(f"  - 初始加载了 {len(self.df)} 行数据")
 #         except Exception as e:
 #             print(f"❌ {e}"); return False
@@ -1095,6 +1095,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
