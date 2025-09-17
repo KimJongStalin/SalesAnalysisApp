@@ -274,38 +274,38 @@
                 });
             }
 
-            // function setupShareModule() {
-            //     if (!reportData.shareAnalysis) return;
-            //     populateSelect('share-filter', reportData.product_types, 'Overall');
-            //     const updateShareChart = () => {
-            //         const dimension = document.getElementById('share-dimension-selector').value;
-            //         const pType = document.getElementById('share-filter').value;
-            //         const data = reportData.shareAnalysis?.[dimension]?.[pType];
-            //         createOrUpdateChart('shareAnalysisChart', {
-            //             type: 'bar',
-            //             data: data ? { ...data, datasets: data.datasets.map((ds,i) => ({...ds, backgroundColor: chartColors[i % chartColors.length]})) } : null,
-            //             options: { 
-            //                 responsive: true, maintainAspectRatio: false, 
-            //                 scales: { x: { stacked: true }, y: { stacked: true, min: 0, max: 100, ticks: { callback: v => v ? `${v.toFixed(0)}%` : '0%' } } }, 
-            //                 plugins: { 
-            //                     title: { display: true, text: `市场份额 - ${pType} (按 ${dimension} 划分)` },
-            //                     datalabels: { display: true, color: 'white', font: { weight: 'bold' }, formatter: (value) => (value > 3 ? value.toFixed(1) + '%' : null) },
-            //                     tooltip: { callbacks: {
-            //                         label: function(context) {
-            //                             const dataset = context.dataset; const dataIndex = context.dataIndex; const label = dataset.label || '';
-            //                             const percentage = context.formattedValue + '%'; const absoluteValue = dataset.absoluteData[dataIndex]; 
-            //                             const formattedAbsolute = Math.round(absoluteValue).toLocaleString('en-US');
-            //                             return `${label}: ${percentage} (${formattedAbsolute})`;
-            //                         }
-            //                     }}
-            //                 } 
-            //             }
-            //         });
-            //     };
-            //     document.getElementById('share-dimension-selector').addEventListener('change', updateShareChart);
-            //     document.getElementById('share-filter').addEventListener('change', updateShareChart);
-            //     updateShareChart();
-            // }
+            function setupShareModule() {
+                if (!reportData.shareAnalysis) return;
+                populateSelect('share-filter', reportData.product_types, 'Overall');
+                const updateShareChart = () => {
+                    const dimension = document.getElementById('share-dimension-selector').value;
+                    const pType = document.getElementById('share-filter').value;
+                    const data = reportData.shareAnalysis?.[dimension]?.[pType];
+                    createOrUpdateChart('shareAnalysisChart', {
+                        type: 'bar',
+                        data: data ? { ...data, datasets: data.datasets.map((ds,i) => ({...ds, backgroundColor: chartColors[i % chartColors.length]})) } : null,
+                        options: { 
+                            responsive: true, maintainAspectRatio: false, 
+                            scales: { x: { stacked: true }, y: { stacked: true, min: 0, max: 100, ticks: { callback: v => v ? `${v.toFixed(0)}%` : '0%' } } }, 
+                            plugins: { 
+                                title: { display: true, text: `市场份额 - ${pType} (按 ${dimension} 划分)` },
+                                datalabels: { display: true, color: 'white', font: { weight: 'bold' }, formatter: (value) => (value > 3 ? value.toFixed(1) + '%' : null) },
+                                tooltip: { callbacks: {
+                                    label: function(context) {
+                                        const dataset = context.dataset; const dataIndex = context.dataIndex; const label = dataset.label || '';
+                                        const percentage = context.formattedValue + '%'; const absoluteValue = dataset.absoluteData[dataIndex]; 
+                                        const formattedAbsolute = Math.round(absoluteValue).toLocaleString('en-US');
+                                        return `${label}: ${percentage} (${formattedAbsolute})`;
+                                    }
+                                }}
+                            } 
+                        }
+                    });
+                };
+                document.getElementById('share-dimension-selector').addEventListener('change', updateShareChart);
+                document.getElementById('share-filter').addEventListener('change', updateShareChart);
+                updateShareChart();
+            }
             function setupGrowthModule() {              if (!reportData.growthTables || Object.keys(reportData.growthTables).length === 0) {
                  document.getElementById('growthTableContainer').innerHTML = '<p class="text-center text-muted mt-4">无可用表格数据</p>';
                  return;
@@ -341,53 +341,53 @@
               updateGrowthTable(); // 首次加载时，根据默认选中的维度渲染表格
             }
 
-            function setupShareModule() {
-              if (!reportData.shareAnalysis || Object.keys(reportData.shareAnalysis).length === 0) {
-                // 如果没有市场份额数据，可以隐藏整个模块或显示提示
-                const section = document.getElementById('shareAnalysisChart')?.closest('.dashboard-section');
-                if (section) section.style.display = 'none';
-                return;
-              }
-              const shareDimSelector = document.getElementById('share-dimension-selector');
-              const shareFilter = document.getElementById('share-filter');
-              // 【【【 核心修改：动态生成维度选项 】】】
-              const availableDimensions = Object.keys(reportData.shareAnalysis);
-              if (shareDimSelector.options.length === 0) { 
-                availableDimensions.forEach(dimKey => {
-                  const displayName = `${dimKey.replace(/_/g, ' & ')}`;
-                  shareDimSelector.add(new Option(displayName, dimKey));
-                });
-              }
-              populateSelect('share-filter', reportData.product_types, 'Overall');
-              const updateShareChart = () => {
-                const dimension = shareDimSelector.value;
-                const pType = shareFilter.value;
-                const data = reportData.shareAnalysis?.[dimension]?.[pType];
-                createOrUpdateChart('shareAnalysisChart', {
-                  type: 'bar',
-                  data: data ? { ...data, datasets: data.datasets.map((ds,i) => ({...ds, backgroundColor: chartColors[i % chartColors.length]})) } : null,
-                  options: {
-                    responsive: true, maintainAspectRatio: false, 
-                    scales: { x: { stacked: true }, y: { stacked: true, min: 0, max: 100, ticks: { callback: v => v ? `${v.toFixed(0)}%` : '0%' } } }, 
-                    plugins: {
-                      title: { display: true, text: `市场份额 - ${pType} (按 ${dimension} 划分)` },
-                      datalabels: { display: true, color: 'white', font: { weight: 'bold' }, formatter: (value) => (value > 3 ? value.toFixed(1) + '%' : null) },
-                      tooltip: { callbacks: {
-                        label: function(context) {
-                            const dataset = context.dataset; const dataIndex = context.dataIndex; const label = dataset.label || '';
-                            const percentage = context.formattedValue + '%'; const absoluteValue = dataset.absoluteData[dataIndex]; 
-                            const formattedAbsolute = Math.round(absoluteValue).toLocaleString('en-US');
-                            return `${label}: ${percentage} (${formattedAbsolute})`;
-                        }
-                      }}
-                    }
-                  }
-                });
-              };
-              shareDimSelector.addEventListener('change', updateShareChart);
-              shareFilter.addEventListener('change', updateShareChart);
-              updateShareChart();
-            }
+            // function setupShareModule() {
+            //   if (!reportData.shareAnalysis || Object.keys(reportData.shareAnalysis).length === 0) {
+            //     // 如果没有市场份额数据，可以隐藏整个模块或显示提示
+            //     const section = document.getElementById('shareAnalysisChart')?.closest('.dashboard-section');
+            //     if (section) section.style.display = 'none';
+            //     return;
+            //   }
+            //   const shareDimSelector = document.getElementById('share-dimension-selector');
+            //   const shareFilter = document.getElementById('share-filter');
+            //   // 【【【 核心修改：动态生成维度选项 】】】
+            //   const availableDimensions = Object.keys(reportData.shareAnalysis);
+            //   if (shareDimSelector.options.length === 0) { 
+            //     availableDimensions.forEach(dimKey => {
+            //       const displayName = `${dimKey.replace(/_/g, ' & ')}`;
+            //       shareDimSelector.add(new Option(displayName, dimKey));
+            //     });
+            //   }
+            //   populateSelect('share-filter', reportData.product_types, 'Overall');
+            //   const updateShareChart = () => {
+            //     const dimension = shareDimSelector.value;
+            //     const pType = shareFilter.value;
+            //     const data = reportData.shareAnalysis?.[dimension]?.[pType];
+            //     createOrUpdateChart('shareAnalysisChart', {
+            //       type: 'bar',
+            //       data: data ? { ...data, datasets: data.datasets.map((ds,i) => ({...ds, backgroundColor: chartColors[i % chartColors.length]})) } : null,
+            //       options: {
+            //         responsive: true, maintainAspectRatio: false, 
+            //         scales: { x: { stacked: true }, y: { stacked: true, min: 0, max: 100, ticks: { callback: v => v ? `${v.toFixed(0)}%` : '0%' } } }, 
+            //         plugins: {
+            //           title: { display: true, text: `市场份额 - ${pType} (按 ${dimension} 划分)` },
+            //           datalabels: { display: true, color: 'white', font: { weight: 'bold' }, formatter: (value) => (value > 3 ? value.toFixed(1) + '%' : null) },
+            //           tooltip: { callbacks: {
+            //             label: function(context) {
+            //                 const dataset = context.dataset; const dataIndex = context.dataIndex; const label = dataset.label || '';
+            //                 const percentage = context.formattedValue + '%'; const absoluteValue = dataset.absoluteData[dataIndex]; 
+            //                 const formattedAbsolute = Math.round(absoluteValue).toLocaleString('en-US');
+            //                 return `${label}: ${percentage} (${formattedAbsolute})`;
+            //             }
+            //           }}
+            //         }
+            //       }
+            //     });
+            //   };
+            //   shareDimSelector.addEventListener('change', updateShareChart);
+            //   shareFilter.addEventListener('change', updateShareChart);
+            //   updateShareChart();
+            // }
 
             
             function setupGrowthModule() {
