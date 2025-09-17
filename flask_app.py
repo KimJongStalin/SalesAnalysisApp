@@ -108,7 +108,7 @@ def home_and_upload():
             <html lang="zh-CN">
             <head>
                 <meta charset="UTF-8">
-                <title>VOM 高度自定义分析工具</title>
+                <title>VOM分析工具</title>
                 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
                 <style>body { padding: 2rem; background-color: #f8f9fa; }</style>
             </head>
@@ -204,3 +204,4 @@ if __name__ == '__main__':
     # Railway 会通过环境变量 PORT 告诉应用应该监听哪个端口
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+
