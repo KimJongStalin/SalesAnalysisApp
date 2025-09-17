@@ -1069,7 +1069,7 @@ class SalesAnalyzer:
                 except Exception as e:
                     print(f"❌ 为 '{p_type}' 的 '{dim_key}' 维度生成气泡图时发生错误: {e}")
                     strategic_positioning_data[p_type][dim_key] = []
-         print("--- 正在计算市场份额 ---")
+        print("--- 正在计算市场份额 ---")
         share_data = {}
         share_dimensions_to_run = [k for k, v in table_dimensions.items() if len(v) == 1]
         for dim_key in share_dimensions_to_run:
@@ -1163,6 +1163,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
