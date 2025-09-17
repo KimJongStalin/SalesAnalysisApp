@@ -101,17 +101,26 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 @app.route('/', methods=['GET', 'POST'])
 def home_and_upload():
     if request.method == 'GET':
+
         return """
             <!DOCTYPE html>
             <html lang="zh-CN">
             <head>
-                </head>
+                <meta charset="UTF-8">
+                <title>VOM 分析工具</title>
+                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+                <style>body { padding: 2rem; background-color: #f8f9fa; }</style>
+            </head>
             <body>
                 <div class="container">
                     <div class="card">
                         <div class="card-body">
-                            <h1 class="card-title text-center mb-4">VOM 销售数据分析 (自定义模式)</h1>
+                            <h1 class="card-title text-center mb-4">VOM 销售数据分析 </h1>
                             <form method="post" enctype="multipart/form-data">
+                                <div class="mb-3">
+                                    <label for="file" class="form-label fw-bold">1. 上传Excel文件</label>
+                                    <input type="file" class="form-control" name="file" required>
+                                </div>
                                 <div class="mb-3">
                                     <label for="single_dims" class="form-label fw-bold">2. 输入【单维度】分析列名 (可选)</label>
                                     <input type="text" class="form-control" name="single_dims" id="single_dims" placeholder="例如: brand,packsize 或直接输入Excel中的列名">
@@ -196,5 +205,6 @@ if __name__ == '__main__':
     # Railway 会通过环境变量 PORT 告诉应用应该监听哪个端口
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+
 
 
