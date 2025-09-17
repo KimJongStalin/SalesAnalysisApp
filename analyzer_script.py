@@ -535,29 +535,60 @@ import statsmodels.api as sm
 
 
 
-# 【【【 步骤 2A: 在这里粘贴下面的新函数 】】】
+# # 【【【 步骤 2A: 在这里粘贴下面的新函数 】】】
+# def build_dims_from_strings(single_dims_str, cross_dims_str, column_mappings):
+#     """根据用户输入的字符串，构建分析所需的两个核心字典。"""
+#     table_dimensions, dims_to_analyze = {}, {}
+
+#     # 处理单维度
+#     single_dims = [s.strip() for s in single_dims_str.split(',') if s.strip()]
+#     for dim in single_dims:
+#         table_dimensions[dim] = [dim]
+#         dims_to_analyze[dim] = column_mappings.get(dim)
+
+#     # 处理交叉维度
+#     cross_dims_raw = [c.strip() for c in cross_dims_str.split(',') if c.strip()]
+#     for cross_dim_str in cross_dims_raw:
+#         if '&' in cross_dim_str:
+#             dims = [d.strip() for d in cross_dim_str.split('&')]
+#             if len(dims) == 2: # 确保是两列的组合
+#                 key = '_'.join(dims) # 使用下划线连接作为内部key
+#                 table_dimensions[key] = dims
+#                 dims_to_analyze[key] = tuple(column_mappings.get(d) for d in dims)
+
+#     return table_dimensions, dims_to_analyze
+
+
+
 def build_dims_from_strings(single_dims_str, cross_dims_str, column_mappings):
-    """根据用户输入的字符串，构建分析所需的两个核心字典。"""
+    """
+    根据用户输入的字符串，构建分析所需的两个核心字典。
+    新版逻辑：如果输入的值在映射字典中找不到，则直接使用输入值本身作为列名。
+    """
     table_dimensions, dims_to_analyze = {}, {}
+    
+    # --- 核心改动点 ---
+    def get_col_name(key):
+        # 优先从映射字典中查找。如果找不到，就返回 key 本身。
+        return column_mappings.get(key, key)
 
     # 处理单维度
     single_dims = [s.strip() for s in single_dims_str.split(',') if s.strip()]
     for dim in single_dims:
         table_dimensions[dim] = [dim]
-        dims_to_analyze[dim] = column_mappings.get(dim)
+        dims_to_analyze[dim] = get_col_name(dim) # <-- 使用新逻辑
 
     # 处理交叉维度
     cross_dims_raw = [c.strip() for c in cross_dims_str.split(',') if c.strip()]
     for cross_dim_str in cross_dims_raw:
         if '&' in cross_dim_str:
             dims = [d.strip() for d in cross_dim_str.split('&')]
-            if len(dims) == 2: # 确保是两列的组合
-                key = '_'.join(dims) # 使用下划线连接作为内部key
+            if len(dims) == 2:
+                key = '_'.join(dims)
                 table_dimensions[key] = dims
-                dims_to_analyze[key] = tuple(column_mappings.get(d) for d in dims)
-
+                dims_to_analyze[key] = tuple(get_col_name(d) for d in dims) # <-- 使用新逻辑
+                
     return table_dimensions, dims_to_analyze
-
 
 # 基础配置字典，Flask服务器将导入并使用它
 analysis_config = {
@@ -1095,6 +1126,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
