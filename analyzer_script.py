@@ -676,8 +676,8 @@ class SalesAnalyzer:
         
         cols = self.config['columns']
         date_col, sales_col, type_col, asin_col = cols['date'], cols['sales'], cols['type'], cols['asin']
-        product_types = ["Overall"] + sorted(self.df[type_col].unique().tolist())
-
+        # product_types = ["Overall"] + sorted(self.df[type_col].unique().tolist())
+        product_types = ["Overall"] + sorted([p_type.capitalize() for p_type in self.df[type_col].unique().tolist()])
         dynamic_time_events = []
         year_agnostic_events = self.config.get("time_events", {})
         if not self.df.empty and year_agnostic_events:
@@ -1126,6 +1126,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
