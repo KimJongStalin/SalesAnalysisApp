@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -99,14 +100,13 @@
             <div class="section-header d-flex justify-content-between align-items-center">
                 <h2>整合增长表</h2>
                 <div class="controls d-flex">
-                    <select id="table-filter" class="form-select"></select>
-                    </select>
                     <select id="table-dimension-selector" class="form-select">
+                    </select>
+                    <select id="table-filter" class="form-select"></select>
                 </div>
             </div>
             <div id="growthTableContainer" class="table-container" style="min-height: 0;"></div>
         </div>
-
 
         
 
@@ -118,7 +118,7 @@
               reportData = __DATA_PLACEHOLDER__;
               if (typeof reportData !== 'object' || reportData === null) { throw new Error("数据格式无效。"); }
             } catch (error) { document.body.innerHTML = '<div class="alert alert-danger m-5"><h1>加载数据失败</h1><p>无法解析数据。</p></div>'; return; }
-
+          
             Chart.register(ChartDataLabels);
             Chart.defaults.scale.grid.display = false;
             Chart.defaults.plugins.datalabels.display = false;
@@ -307,89 +307,6 @@
                 document.getElementById('share-filter').addEventListener('change', updateShareChart);
                 updateShareChart();
             }
-            function setupGrowthModule() {              if (!reportData.growthTables || Object.keys(reportData.growthTables).length === 0) {
-                 document.getElementById('growthTableContainer').innerHTML = '<p class="text-center text-muted mt-4">无可用表格数据</p>';
-                 return;
-              }
-
-              const tableDimSelector = document.getElementById('table-dimension-selector');
-              const tableFilter = document.getElementById('table-filter');
-    
-               // 【【【 核心修改：从分析结果中动态生成维度选项 】】】
-                 // 1. 从 reportData.growthTables 对象中，获取所有成功分析了的维度键名
-              const availableDimensions = Object.keys(reportData.growthTables);
-
-               // 2. 遍历这些键名，为每一个键名创建一个下拉选项
-              if (tableDimSelector.options.length === 0) { // 防止重复添加
-                availableDimensions.forEach(dimKey => {
-            // 从 key 生成一个用户友好的显示名称，例如 "tiptype_packsize" -> "按 tiptype & packsize"
-                  const displayName = `${dimKey.replace(/_/g, ' & ')}`;
-                  tableDimSelector.add(new Option(displayName, dimKey));
-                });
-              }
-
-             // 后面这部分逻辑保持不变
-              populateSelect('table-filter', reportData.product_types, 'Overall');
-    
-              const updateGrowthTable = () => {
-                const dimension = tableDimSelector.value;
-                const pType = tableFilter.value;
-                renderTable('growthTableContainer', reportData.growthTables?.[dimension]?.[pType]);
-              };
-
-              tableDimSelector.addEventListener('change', updateGrowthTable);
-              tableFilter.addEventListener('change', updateGrowthTable);
-              updateGrowthTable(); // 首次加载时，根据默认选中的维度渲染表格
-            }
-
-            // function setupShareModule() {
-            //   if (!reportData.shareAnalysis || Object.keys(reportData.shareAnalysis).length === 0) {
-            //     // 如果没有市场份额数据，可以隐藏整个模块或显示提示
-            //     const section = document.getElementById('shareAnalysisChart')?.closest('.dashboard-section');
-            //     if (section) section.style.display = 'none';
-            //     return;
-            //   }
-            //   const shareDimSelector = document.getElementById('share-dimension-selector');
-            //   const shareFilter = document.getElementById('share-filter');
-            //   // 【【【 核心修改：动态生成维度选项 】】】
-            //   const availableDimensions = Object.keys(reportData.shareAnalysis);
-            //   if (shareDimSelector.options.length === 0) { 
-            //     availableDimensions.forEach(dimKey => {
-            //       const displayName = `${dimKey.replace(/_/g, ' & ')}`;
-            //       shareDimSelector.add(new Option(displayName, dimKey));
-            //     });
-            //   }
-            //   populateSelect('share-filter', reportData.product_types, 'Overall');
-            //   const updateShareChart = () => {
-            //     const dimension = shareDimSelector.value;
-            //     const pType = shareFilter.value;
-            //     const data = reportData.shareAnalysis?.[dimension]?.[pType];
-            //     createOrUpdateChart('shareAnalysisChart', {
-            //       type: 'bar',
-            //       data: data ? { ...data, datasets: data.datasets.map((ds,i) => ({...ds, backgroundColor: chartColors[i % chartColors.length]})) } : null,
-            //       options: {
-            //         responsive: true, maintainAspectRatio: false, 
-            //         scales: { x: { stacked: true }, y: { stacked: true, min: 0, max: 100, ticks: { callback: v => v ? `${v.toFixed(0)}%` : '0%' } } }, 
-            //         plugins: {
-            //           title: { display: true, text: `市场份额 - ${pType} (按 ${dimension} 划分)` },
-            //           datalabels: { display: true, color: 'white', font: { weight: 'bold' }, formatter: (value) => (value > 3 ? value.toFixed(1) + '%' : null) },
-            //           tooltip: { callbacks: {
-            //             label: function(context) {
-            //                 const dataset = context.dataset; const dataIndex = context.dataIndex; const label = dataset.label || '';
-            //                 const percentage = context.formattedValue + '%'; const absoluteValue = dataset.absoluteData[dataIndex]; 
-            //                 const formattedAbsolute = Math.round(absoluteValue).toLocaleString('en-US');
-            //                 return `${label}: ${percentage} (${formattedAbsolute})`;
-            //             }
-            //           }}
-            //         }
-            //       }
-            //     });
-            //   };
-            //   shareDimSelector.addEventListener('change', updateShareChart);
-            //   shareFilter.addEventListener('change', updateShareChart);
-            //   updateShareChart();
-            // }
-
             
             function setupGrowthModule() {
               if (!reportData.growthTables || Object.keys(reportData.growthTables).length === 0) {
@@ -619,6 +536,80 @@
                 // 首次加载
                 updateTableView();
             }
+
+
+           
+            // 一维度气泡分析
+            // function setupStrategicBubbleChart() {
+            //     if (!reportData.strategicPositioning || !reportData.strategicPositioning.pricerange_bubble) {
+            //         document.getElementById('strategicBubbleChart').parentElement.innerHTML = '<div class="error-message">战略定位图表数据不足。</div>';
+            //         return;
+            //     }
+
+            //     const data = reportData.strategicPositioning.pricerange_bubble;
+                
+            //     // 1. 预处理数据，转换销售额为半径，并找到贡献度的范围
+            //     const salesData = data.map(d => d.r);
+            //     const maxSales = Math.max(...salesData, 1); // 避免数据为空时出错
+            //     const contribData = data.map(d => d.contrib).filter(c => !isNaN(c));
+            //     const minContrib = Math.min(...contribData, 0);
+            //     const maxContrib = Math.max(...contribData, 0);
+
+            //     data.forEach(d => {
+            //         d.r = (d.r / maxSales) * 50 + 5; // 半径在5到55之间
+            //     });
+                
+            //     // 2. 配置数据集，backgroundColor 现在是一个函数
+            //     const chartData = {
+            //         datasets: [{
+            //             label: '价格区间',
+            //             data: data,
+            //             backgroundColor: function(context) {
+            //                 const bubble = context.raw;
+            //                 const contrib = bubble.contrib;
+            //                 const range = maxContrib - minContrib;
+                            
+            //                 // 如果贡献度是负的（拖累增长），显示红色
+            //                 if (contrib < 0) {
+            //                     const alpha = (minContrib !== 0) ? (contrib / minContrib) * 0.7 + 0.3 : 0.3;
+            //                     return `rgba(220, 53, 69, ${alpha})`; // 红色
+            //                 }
+                            
+            //                 // 如果贡献度是正的，显示蓝色，贡献越大颜色越深
+            //                 const alpha = (range > 0) ? ((contrib - minContrib) / range) * 0.7 + 0.3 : 0.3;
+            //                 return `rgba(13, 110, 253, ${alpha})`; // 蓝色
+            //             },
+            //         }]
+            //     };
+
+            //     // 3. 渲染图表，并更新 tooltip
+            //     createOrUpdateChart('strategicBubbleChart', {
+            //         type: 'bubble',
+            //         data: chartData,
+            //         options: {
+            //             responsive: true,
+            //             maintainAspectRatio: false,
+            //             scales: {
+            //                 x: { title: { display: true, text: '市场份额 (%)' } },
+            //                 y: { title: { display: true, text: '同比增长率 (%)' } }
+            //             },
+            //             plugins: {
+            //                 title: { display: true, text: '各价格区间的市场地位与增长潜力' },
+            //                 tooltip: {
+            //                     callbacks: {
+            //                         label: function(context) {
+            //                             const d = context.raw;
+            //                             // 从原始数据中获取未处理的销售额
+            //                             const originalSales = reportData.strategicPositioning.pricerange_bubble.find(item => item.label === d.label).r;
+            //                             return `${d.label}: 份额 ${d.x}%, 增长 ${d.y}%, 贡献 ${d.contrib}%, 年销售额 ${originalSales.toLocaleString('en-US')}`;
+            //                         }
+            //                     }
+            //                 }
+            //             }
+            //         }
+            //     });
+            // }
+         
 
 
             function setupStarProductChart() {
