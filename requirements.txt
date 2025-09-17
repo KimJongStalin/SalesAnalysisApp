@@ -1,6 +1,11 @@
-Flask
 pandas
-openpyxl
-gunicorn
+numpy
 statsmodels
 prophet
+Flask
+gunicorn
+openpyxl
+scipy
+cmdstanpy
+plotly
+
