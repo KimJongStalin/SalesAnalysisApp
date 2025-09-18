@@ -1741,29 +1741,48 @@ class SalesAnalyzer:
         print("✅ 数据加载与预处理成功。")
         return True
 
-    def prepare_and_get_data(self, user_choices=None):
+    def prepare_and_get_data(self, user_choices=None): # <-- 修正点1：恢复 user_choices 参数
+        """
+        执行所有分析的核心函数。
+        """
+        # <-- 关键保留点：先加载数据，如果失败则直接终止
+        if not self.load_and_preprocess_data():
+            print("\n❌ 分析因数据加载失败而终止。")
+            return None # 返回 None 比 False 更好，表示“无结果”
 
-      cols = self.config['columns']
-      date_col, sales_col, type_col, asin_col = cols['date'], cols['sales'], cols['type'], cols['asin']
-      product_types = ["Overall"] + sorted(self.df[type_col].unique().tolist())
-   
-      if user_choices and (user_choices.get('single') or user_choices.get('cross')):
-        print("\n--- 根据用户输入动态生成分析维度 ---")
-        table_dimensions, dims_to_analyze = build_dims_from_strings(
-            user_choices.get('single', ''),
-            user_choices.get('cross', ''),
-            cols
-        )
-      else:
-        print("\n--- 使用默认的分析维度 ---")
-        table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
-        dims_to_analyze = {
-            'pricerange': cols.get('pricerange'),
-            'brand': cols.get('brand'),
-            'packsize': cols.get('packsize'),
-            'tiptype': cols.get('tiptype'),
-            'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
-        }
+        print("\n--- 正在准备所有分析数据 ---")
+        
+        # ==========================================================
+        # 阶段一：准备基础变量和分析维度
+        # ==========================================================
+        cols = self.config['columns']
+        date_col, sales_col, type_col, asin_col = cols['date'], cols['sales'], cols['type'], cols['asin']
+        
+        # 如果 self.df 为空，说明加载后被清空了，也无法分析
+        if self.df.empty:
+            print("⚠️ 数据加载后为空，无法继续分析。")
+            return None
+
+        product_types = ["Overall"] + sorted(self.df[type_col].unique().tolist())
+
+        # <-- 修正点2：恢复处理用户输入维度的逻辑
+        if user_choices and (user_choices.get('single') or user_choices.get('cross')):
+            print("\n--- 根据用户输入动态生成分析维度 ---")
+            table_dimensions, dims_to_analyze = build_dims_from_strings(
+                user_choices.get('single', ''),
+                user_choices.get('cross', ''),
+                cols
+            )
+        else:
+            print("\n--- 使用默认的分析维度 ---")
+            table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
+            dims_to_analyze = {
+                'pricerange': cols.get('pricerange'),
+                'brand': cols.get('brand'),
+                'packsize': cols.get('packsize'),
+                'tiptype': cols.get('tiptype'),
+                'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
+            }
 
         print("--- 正在计算增长表格 ---")
         # table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
@@ -2199,6 +2218,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
