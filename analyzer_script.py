@@ -1217,7 +1217,7 @@ class SalesAnalyzer:
         if not all([date_col, sales_col, type_col, asin_col]):
              print("❌ 错误: 'date', 'sales', 'type', 'asin' 必须在 columns 中配置。"); return {}
 
-        product_types = ["Overall"] + sorted([str(p_type).capitalize() for p_type in self.df[type_col].unique().tolist()])
+        product_types = ["Overall"] + sorted(self.df[type_col].unique().tolist())
         
         dynamic_time_events = []
         time_events_config = self.config.get("time_events", {})
@@ -1517,6 +1517,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
