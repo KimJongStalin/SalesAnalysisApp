@@ -1112,7 +1112,7 @@ from scipy.stats.mstats import winsorize
 
 # 辅助函数：根据用户输入，构建原始代码所需的三个指令变量
 def build_dims_from_strings(single_dims_str, cross_dims_str, column_mappings):
-    share_dimensions = []
+
     table_dimensions, dims_to_analyze = {}, {}
     
     def get_col_name(key):
@@ -1121,7 +1121,7 @@ def build_dims_from_strings(single_dims_str, cross_dims_str, column_mappings):
     # 处理单维度
     single_dims = [s.strip() for s in single_dims_str.split(',') if s.strip()]
     for dim in single_dims:
-        share_dimensions.append(dim)
+       
         table_dimensions[dim] = [dim]
         dims_to_analyze[dim] = get_col_name(dim)
 
@@ -1135,7 +1135,7 @@ def build_dims_from_strings(single_dims_str, cross_dims_str, column_mappings):
                 table_dimensions[key] = dims
                 dims_to_analyze[key] = tuple(get_col_name(d) for d in dims)
                 
-    return share_dimensions, table_dimensions, dims_to_analyze
+    return  table_dimensions, dims_to_analyze
 
 # 基础配置字典：来自您的原始文件
 analysis_config = {
@@ -1686,6 +1686,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
