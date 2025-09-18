@@ -1741,28 +1741,13 @@ class SalesAnalyzer:
         print("✅ 数据加载与预处理成功。")
         return True
 
-    def prepare_and_get_data(self, user_choices=None):  
-        cols = self.config['columns']
-        date_col, sales_col, type_col, asin_col = cols['date'], cols['sales'], cols['type'], cols['asin']
-        product_types = ["Overall"] + sorted(self.df[type_col].unique().tolist())  
-      
-        dynamic_time_events = []
-        year_agnostic_events = self.config.get("time_events", {})
-        if not self.df.empty and year_agnostic_events:
-            first_data_date = self.df[date_col].min()
-            last_year_in_data = self.df[date_col].max().year
-            for year in range(first_data_date.year, last_year_in_data + 2):
-                for event_name, mm_dd in year_agnostic_events.items():
-                    full_date_str = f"{year}-{mm_dd}"
-                    try:
-                        event_date = pd.to_datetime(full_date_str)
-                        if event_date >= first_data_date:
-                            dynamic_time_events.append({"label": event_name, "date": full_date_str})
-                    except ValueError:
-                        continue      
+    def prepare_and_get_data(self, user_choices=None):
 
-                            
-       if user_choices and (user_choices.get('single') or user_choices.get('cross')):
+      cols = self.config['columns']
+      date_col, sales_col, type_col, asin_col = cols['date'], cols['sales'], cols['type'], cols['asin']
+      product_types = ["Overall"] + sorted(self.df[type_col].unique().tolist())
+   
+      if user_choices and (user_choices.get('single') or user_choices.get('cross')):
         print("\n--- 根据用户输入动态生成分析维度 ---")
         table_dimensions, dims_to_analyze = build_dims_from_strings(
             user_choices.get('single', ''),
@@ -1778,8 +1763,8 @@ class SalesAnalyzer:
             'packsize': cols.get('packsize'),
             'tiptype': cols.get('tiptype'),
             'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
-        }             
-    
+        }
+
         print("--- 正在计算增长表格 ---")
         # table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
         table_data = {}
@@ -2194,6 +2179,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
