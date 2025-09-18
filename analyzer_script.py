@@ -1101,7 +1101,6 @@
 # print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
 
 
-
 from prophet import Prophet
 import pandas as pd
 import numpy as np
@@ -1113,13 +1112,39 @@ from itertools import combinations
 import statsmodels.api as sm
 
 
+
+# # 【【【 步骤 2A: 在这里粘贴下面的新函数 】】】
+# def build_dims_from_strings(single_dims_str, cross_dims_str, column_mappings):
+#     """根据用户输入的字符串，构建分析所需的两个核心字典。"""
+#     table_dimensions, dims_to_analyze = {}, {}
+
+#     # 处理单维度
+#     single_dims = [s.strip() for s in single_dims_str.split(',') if s.strip()]
+#     for dim in single_dims:
+#         table_dimensions[dim] = [dim]
+#         dims_to_analyze[dim] = column_mappings.get(dim)
+
+#     # 处理交叉维度
+#     cross_dims_raw = [c.strip() for c in cross_dims_str.split(',') if c.strip()]
+#     for cross_dim_str in cross_dims_raw:
+#         if '&' in cross_dim_str:
+#             dims = [d.strip() for d in cross_dim_str.split('&')]
+#             if len(dims) == 2: # 确保是两列的组合
+#                 key = '_'.join(dims) # 使用下划线连接作为内部key
+#                 table_dimensions[key] = dims
+#                 dims_to_analyze[key] = tuple(column_mappings.get(d) for d in dims)
+
+#     return table_dimensions, dims_to_analyze
+
+
+
 def build_dims_from_strings(single_dims_str, cross_dims_str, column_mappings):
     """
     根据用户输入的字符串，构建分析所需的两个核心字典。
     新版逻辑：如果输入的值在映射字典中找不到，则直接使用输入值本身作为列名。
     """
     table_dimensions, dims_to_analyze = {}, {}
-
+    
     # --- 核心改动点 ---
     def get_col_name(key):
         # 优先从映射字典中查找。如果找不到，就返回 key 本身。
@@ -1140,7 +1165,7 @@ def build_dims_from_strings(single_dims_str, cross_dims_str, column_mappings):
                 key = '_'.join(dims)
                 table_dimensions[key] = dims
                 dims_to_analyze[key] = tuple(get_col_name(d) for d in dims) # <-- 使用新逻辑
-
+                
     return table_dimensions, dims_to_analyze
 
 # 基础配置字典，Flask服务器将导入并使用它
@@ -1222,11 +1247,15 @@ class SalesAnalyzer:
             return False
 
         print("\n--- 正在准备所有分析数据 ---")
-
+        
         # ========================================================================
         # == 以下是您 `VOM分析代码.txt` 中 `prepare_html_report_data` 的完整逻辑 ==
         # ========================================================================
-            
+        
+        cols = self.config['columns']
+        date_col, sales_col, type_col, asin_col = cols['date'], cols['sales'], cols['type'], cols['asin']
+        # product_types = ["Overall"] + sorted(self.df[type_col].unique().tolist())
+        product_types = ["Overall"] + sorted([p_type.capitalize() for p_type in self.df[type_col].unique().tolist()])
         dynamic_time_events = []
         year_agnostic_events = self.config.get("time_events", {})
         if not self.df.empty and year_agnostic_events:
@@ -1306,7 +1335,7 @@ class SalesAnalyzer:
                 datasets = [{"label": str(col), "data": data_pct_sorted[col].round(1).tolist(), "absoluteData": data_sorted[col].round(0).tolist()} for col in data_sorted.columns]
                 share_data[dim][p_type] = { "labels": data_pct_sorted.index.to_period(freq).strftime(time_format).tolist(), "datasets": datasets }
 
-
+       
 
         print("--- 正在计算帕累托数据 ---")
         pareto_data_series = self.df.groupby(asin_col)[sales_col].sum().sort_values(ascending=False).head(30)
@@ -1477,9 +1506,6 @@ class SalesAnalyzer:
 
             structural_kpis[p_type] = kpi_results
 
-        cols = self.config['columns']
-        date_col, sales_col, type_col, asin_col = cols['date'], cols['sales'], cols['type'], cols['asin']
-        product_types = ["Overall"] + sorted(self.df[type_col].unique().tolist())
 
         if user_choices and (user_choices.get('single') or user_choices.get('cross')):
           print("\n--- 根据用户输入动态生成分析维度 ---")
@@ -1498,7 +1524,6 @@ class SalesAnalyzer:
             'tiptype': cols.get('tiptype'),
             'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
           }
-
 
 
         print("--- 正在计算增长表格 ---")
@@ -1623,7 +1648,43 @@ class SalesAnalyzer:
                     print(f"❌ 为 '{p_type}' 的 '{dim_key}' 维度生成气泡图时发生错误: {e}")
                     strategic_positioning_data[p_type][dim_key] = []
 
+        # print("--- 正在计算市场份额 ---")
+        # share_data = {}
+        # share_dimensions_to_run = [k for k, v in table_dimensions.items() if len(v) == 1]
+        # for dim_key in share_dimensions_to_run:
+        #   dim_col_name = cols.get(dim_key)
+        #   if not dim_col_name or dim_col_name not in self.df.columns: continue
+        #   share_data[dim_key] = {}
+        #   for p_type in product_types:
+        #     df_filtered = self.df if p_type == "Overall" else self.df[self.df[type_col] == p_type]
+        #     if df_filtered.empty: continue
 
+        #     freq = 'QE'
+        #     time_format = '%YQ%q'
+        #     top_n = 20
+
+        #     if df_filtered[dim_col_name].nunique() > top_n: # 如果当前维度的唯一值数量 > 20，则自动启用Top N逻辑
+        #       total_sales = df_filtered.groupby(dim_col_name)[sales_col].sum()
+        #       top_items = total_sales.nlargest(top_n).index.tolist()
+        #       df_with_others = df_filtered.copy()
+        #       df_with_others[dim_col_name] = df_with_others[dim_col_name].apply(lambda x: x if x in top_items else '其他 (Others)')
+        #       data = df_with_others.groupby([pd.Grouper(key=date_col, freq=freq), dim_col_name])[sales_col].sum().unstack(dim_col_name).fillna(0)   
+        #     else:
+        #       data = df_filtered.groupby([pd.Grouper(key=date_col, freq=freq), dim_col_name])[sales_col].sum().unstack(dim_col_name).fillna(0)
+        #     if data.empty: continue
+
+        #     if '其他 (Others)' in data.columns:
+        #       other_col = data.pop('其他 (Others)')
+        #       data['其他 (Others)'] = other_col
+            
+        #     sorted_columns = data.sum().sort_values(ascending=False).index
+        #     data_sorted = data[sorted_columns]
+        #     data_sum = data_sorted.sum(axis=1)
+        #     safe_data_sum = data_sum.where(data_sum != 0, 1)
+        #     data_pct_sorted = data_sorted.div(safe_data_sum, axis=0) * 100
+        #     datasets = [{"label": str(col), "data": data_pct_sorted[col].round(1).tolist(), "absoluteData": data_sorted[col].round(0).tolist()} for col in data_sorted.columns]
+        #     share_data[dim_key][p_type] = { "labels": data_pct_sorted.index.to_period(freq.replace('E', '')).strftime(time_format).tolist(), "datasets": datasets }
+     
         return {
             "product_types": product_types, "time_events": dynamic_time_events, "salesForecast": forecast_data,
             "quarterlyYoY": quarterly_yoy_data, "shareAnalysis": share_data, "growthTables": table_data,
@@ -1655,10 +1716,10 @@ class SalesAnalyzer:
             print(f"\n正在从模板 '{template_path}' 生成网页报告...")
             with open(template_path, 'r', encoding='utf-8') as f:
                 template_str = f.read()
-
+            
             data_json_str = json.dumps(self.dashboard_data, indent=4, ensure_ascii=False, default=str)
             final_html = template_str.replace('__DATA_PLACEHOLDER__', data_json_str)
-
+            
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(final_html)
             print(f"✅ 成功！网页报告已生成: '{output_path}'")
@@ -1669,11 +1730,11 @@ class SalesAnalyzer:
 if __name__ == '__main__':
     # 这是一个示例，用于您想单独测试这个文件时使用
     print("--- 正在独立测试 SalesAnalyzer ---")
-
+    
     # 必须提供一个有效的 excel 文件名才能成功测试
     test_config = analysis_config.copy()
     test_config['input_filepath'] = 'liquid highlighters.xlsx' 
-
+    
     analyzer = SalesAnalyzer(config=test_config)
     if analyzer.run_analysis():
         analyzer.export_to_html(output_path='test_report.html')
