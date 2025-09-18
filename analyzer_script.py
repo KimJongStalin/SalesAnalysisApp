@@ -1742,6 +1742,12 @@ class SalesAnalyzer:
         return True
 
     def prepare_and_get_data(self, user_choices=None):
+        
+            
+            
+        cols = self.config['columns']
+        date_col, sales_col, type_col, asin_col = cols['date'], cols['sales'], cols['type'], cols['asin']
+        product_types = ["Overall"] + sorted(self.df[type_col].unique().tolist())  
 
             
       if user_choices and (user_choices.get('single') or user_choices.get('cross')):
@@ -1762,9 +1768,6 @@ class SalesAnalyzer:
             'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
         }
               
-        cols = self.config['columns']
-        date_col, sales_col, type_col, asin_col = cols['date'], cols['sales'], cols['type'], cols['asin']
-        product_types = ["Overall"] + sorted(self.df[type_col].unique().tolist())  
 
 
         dynamic_time_events = []
@@ -2203,6 +2206,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
