@@ -2145,6 +2145,26 @@ class SalesAnalyzer:
         print("\n✅ 核心分析流程全部完成！")
         # return True
 
+    def run_full_analysis(self, user_choices=None):
+        """
+        这是一个“安全”的函数，它将加载和分析两个步骤打包，保证了正确的执行顺序。
+        """
+        # 第一步：调用加载函数
+        if self.load_and_preprocess_data():
+            # 第二步：如果加载成功，才调用分析函数并返回结果
+            print("\n--- 开始核心分析流程 ---")
+            analysis_result = self.prepare_and_get_data(user_choices)
+            # 将结果存入实例变量，供 export_to_html 等函数使用
+            self.dashboard_data = analysis_result
+            print("\n✅ 核心分析流程全部完成！")
+            return self.dashboard_data
+        else:
+            # 如果加载失败，返回错误信号
+            print("分析失败，因为数据加载出错。")
+            return None # 或者返回一个包含错误信息的字典
+
+
+        
     def export_to_html(self, output_path: str):
         """
         【API模式】将分析数据注入HTML模板，并保存到指定的output_path。
@@ -2179,6 +2199,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
