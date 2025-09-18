@@ -1741,11 +1741,28 @@ class SalesAnalyzer:
         print("✅ 数据加载与预处理成功。")
         return True
 
-    def prepare_and_get_data(self, user_choices=None):      
-      cols = self.config['columns']
-      date_col, sales_col, type_col, asin_col = cols['date'], cols['sales'], cols['type'], cols['asin']
-      product_types = ["Overall"] + sorted(self.df[type_col].unique().tolist())         
-      if user_choices and (user_choices.get('single') or user_choices.get('cross')):
+    def prepare_and_get_data(self, user_choices=None):  
+        cols = self.config['columns']
+        date_col, sales_col, type_col, asin_col = cols['date'], cols['sales'], cols['type'], cols['asin']
+        product_types = ["Overall"] + sorted(self.df[type_col].unique().tolist())  
+      
+        dynamic_time_events = []
+        year_agnostic_events = self.config.get("time_events", {})
+        if not self.df.empty and year_agnostic_events:
+            first_data_date = self.df[date_col].min()
+            last_year_in_data = self.df[date_col].max().year
+            for year in range(first_data_date.year, last_year_in_data + 2):
+                for event_name, mm_dd in year_agnostic_events.items():
+                    full_date_str = f"{year}-{mm_dd}"
+                    try:
+                        event_date = pd.to_datetime(full_date_str)
+                        if event_date >= first_data_date:
+                            dynamic_time_events.append({"label": event_name, "date": full_date_str})
+                    except ValueError:
+                        continue      
+
+                            
+       if user_choices and (user_choices.get('single') or user_choices.get('cross')):
         print("\n--- 根据用户输入动态生成分析维度 ---")
         table_dimensions, dims_to_analyze = build_dims_from_strings(
             user_choices.get('single', ''),
@@ -1761,29 +1778,129 @@ class SalesAnalyzer:
             'packsize': cols.get('packsize'),
             'tiptype': cols.get('tiptype'),
             'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
-        }
-              
+        }             
+    
+        print("--- 正在计算增长表格 ---")
+        # table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
+        table_data = {}
+        for key, dim_names in table_dimensions.items():
+            dim_cols = [cols.get(d) for d in dim_names if cols.get(d) in self.df.columns]
+            if len(dim_cols) != len(dim_names): continue
+            table_data[key] = {}
+            for p_type in product_types:
+                df_filtered = self.df if p_type == "Overall" else self.df[self.df[type_col] == p_type]
+                if df_filtered.empty: continue
+                sales = df_filtered.groupby(dim_cols + [pd.Grouper(key=date_col, freq='Q')])[sales_col].sum().unstack(date_col).fillna(0)
+                if sales.empty: continue
+                if len(sales.columns) > 0:
+                    last_quarter_col = sales.columns[-1]
+                    sales = sales.sort_values(by=last_quarter_col, ascending=False)
+                if key == 'brand' and len(sales) > 20:
+                    top_sales = sales.head(20)
+                    other_sales = sales.iloc[20:].sum()
+                    other_row = pd.DataFrame(other_sales).T
+                    other_row.index = ['其他 (Others)']
+                    sales = pd.concat([top_sales, other_row])
+                if '其他 (Others)' in sales.index:
+                    other_row = sales.loc[['其他 (Others)']]
+                    sales = sales.drop('其他 (Others)')
+                    sales = pd.concat([sales, other_row])
+                display_map = self.config.get("header_mappings", {})
+                display_names = [display_map.get(name.lower(), name.capitalize()) for name in dim_names]
+                display_header = " & ".join(display_names)
+                headers = [display_header] + [q.to_period('Q').strftime('%YQ%q') for q in sales.columns]
+                rows = []
+                for index, row_data in sales.iterrows():
+                    row_content = [{'type': 'label', 'value': str(index)}]
+                    for i, quarter in enumerate(sales.columns):
+                        sale_val_num = row_data.get(quarter, 0)
+                        yoy_val, yoy_status = None, 'neutral'
+                        if sale_val_num == 0:
+                            sale_val_str = "-"
+                        else:
+                            sale_val_str = f"{(sale_val_num / 10000.0):.2f}万"
+                            if i >= 4:
+                                prior_sale_val = row_data.get(sales.columns[i-4], 0)
+                                if prior_sale_val > 0:
+                                    yoy = (sale_val_num / prior_sale_val) - 1
+                                    yoy_val, yoy_status = f"{yoy:.1%}", 'positive' if yoy > 0 else 'negative'
+                                else:
+                                    yoy_val, yoy_status = "New", 'positive'
+                        row_content.append({'type': 'data', 'value': sale_val_str, 'yoy': yoy_val, 'yoy_status': yoy_status})
+                    rows.append(row_content)
+                table_data[key][p_type] = {"headers": headers, "rows": rows}
 
+        print("--- 正在计算支持多维度的战略定位气泡图数据 ---")
+        strategic_positioning_data = {}
 
-        dynamic_time_events = []
-        year_agnostic_events = self.config.get("time_events", {})
-        if not self.df.empty and year_agnostic_events:
-            first_data_date = self.df[date_col].min()
-            last_year_in_data = self.df[date_col].max().year
-            for year in range(first_data_date.year, last_year_in_data + 2):
-                for event_name, mm_dd in year_agnostic_events.items():
-                    full_date_str = f"{year}-{mm_dd}"
-                    try:
-                        event_date = pd.to_datetime(full_date_str)
-                        if event_date >= first_data_date:
-                            dynamic_time_events.append({"label": event_name, "date": full_date_str})
-                    except ValueError:
+        # dims_to_analyze = {
+        #     'pricerange': cols.get('pricerange'),
+        #     'brand': cols.get('brand'),
+        #     'packsize': cols.get('packsize'),
+        #     'tiptype': cols.get('tiptype'),
+        #     'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
+        # }
+
+        for p_type in product_types:
+            strategic_positioning_data[p_type] = {}
+            df_slice_by_type = self.df if p_type == "Overall" else self.df[self.df[type_col] == p_type]
+
+            for dim_key, dim_col_config in dims_to_analyze.items():
+                is_multi_dim = isinstance(dim_col_config, tuple)
+                group_cols = list(dim_col_config) if is_multi_dim else [dim_col_config]
+
+                if any(c is None for c in group_cols) or not all(c in df_slice_by_type.columns for c in group_cols):
+                    continue
+
+                if df_slice_by_type.empty: continue
+
+                try:
+                    quarterly_total_sales_slice = df_slice_by_type.groupby(pd.Grouper(key=date_col, freq='Q'))[sales_col].sum()
+                    sales_by_dim = df_slice_by_type.groupby(group_cols + [pd.Grouper(key=date_col, freq='Q')])[sales_col].sum().unstack(level=date_col).fillna(0)
+
+                    if len(sales_by_dim.columns) < 8: continue
+
+                    recent_quarters = sales_by_dim.columns[-4:]
+                    prior_quarters = sales_by_dim.columns[-8:-4]
+
+                    if not all(q in quarterly_total_sales_slice.index for q in recent_quarters) or \
+                       not all(q in quarterly_total_sales_slice.index for q in prior_quarters):
                         continue
 
+                    yearly_sales = sales_by_dim[recent_quarters].sum(axis=1)
+                    prior_yearly_sales = sales_by_dim[prior_quarters].sum(axis=1)
 
+                    total_market_yearly_sales = quarterly_total_sales_slice.loc[recent_quarters].sum()
 
+                    # 【核心修正】确保 market_share 和 yoy_growth 在多维交叉时能正确对齐
+                    market_share = (yearly_sales / total_market_yearly_sales) * 100 if total_market_yearly_sales > 0 else 0
 
+                    prior_yearly_sales_safe = prior_yearly_sales.where(prior_yearly_sales > 0, 1)
+                    yoy_growth = ((yearly_sales - prior_yearly_sales) / prior_yearly_sales_safe) * 100
 
+                    total_increment = quarterly_total_sales_slice.loc[recent_quarters].sum() - quarterly_total_sales_slice.loc[prior_quarters].sum()
+                    dim_increment = yearly_sales - prior_yearly_sales
+                    contrib_to_growth = (dim_increment / total_increment) * 100 if total_increment != 0 else 0
+
+                    bubble_data = []
+                    for dim_value_tuple in sales_by_dim.index:
+                        # 【核心修正】将复合索引元组转换为更美观的字符串
+                        label_str = str(dim_value_tuple) if not is_multi_dim else ' & '.join(map(str, dim_value_tuple))
+
+                        bubble_data.append({
+                            "label": label_str,
+                            "x": round(market_share.loc[dim_value_tuple], 1),
+                            "y": round(yoy_growth.loc[dim_value_tuple], 1),
+                            "r": int(yearly_sales.loc[dim_value_tuple]),
+                            "contrib": round(contrib_to_growth.loc[dim_value_tuple], 1)
+                        })
+
+                    strategic_positioning_data[p_type][dim_key] = bubble_data
+
+                except Exception as e:
+                    print(f"❌ 为 '{p_type}' 的 '{dim_key}' 维度生成气泡图时发生错误: {e}")
+                    strategic_positioning_data[p_type][dim_key] = []
+        
 
         print("--- 正在计算销售预测 (采用基础 Prophet 模型)... ---")
 
@@ -2020,130 +2137,6 @@ class SalesAnalyzer:
 
             structural_kpis[p_type] = kpi_results
 
-        print("--- 正在计算增长表格 ---")
-        # table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
-        table_data = {}
-        for key, dim_names in table_dimensions.items():
-            dim_cols = [cols.get(d) for d in dim_names if cols.get(d) in self.df.columns]
-            if len(dim_cols) != len(dim_names): continue
-            table_data[key] = {}
-            for p_type in product_types:
-                df_filtered = self.df if p_type == "Overall" else self.df[self.df[type_col] == p_type]
-                if df_filtered.empty: continue
-                sales = df_filtered.groupby(dim_cols + [pd.Grouper(key=date_col, freq='Q')])[sales_col].sum().unstack(date_col).fillna(0)
-                if sales.empty: continue
-                if len(sales.columns) > 0:
-                    last_quarter_col = sales.columns[-1]
-                    sales = sales.sort_values(by=last_quarter_col, ascending=False)
-                if key == 'brand' and len(sales) > 20:
-                    top_sales = sales.head(20)
-                    other_sales = sales.iloc[20:].sum()
-                    other_row = pd.DataFrame(other_sales).T
-                    other_row.index = ['其他 (Others)']
-                    sales = pd.concat([top_sales, other_row])
-                if '其他 (Others)' in sales.index:
-                    other_row = sales.loc[['其他 (Others)']]
-                    sales = sales.drop('其他 (Others)')
-                    sales = pd.concat([sales, other_row])
-                display_map = self.config.get("header_mappings", {})
-                display_names = [display_map.get(name.lower(), name.capitalize()) for name in dim_names]
-                display_header = " & ".join(display_names)
-                headers = [display_header] + [q.to_period('Q').strftime('%YQ%q') for q in sales.columns]
-                rows = []
-                for index, row_data in sales.iterrows():
-                    row_content = [{'type': 'label', 'value': str(index)}]
-                    for i, quarter in enumerate(sales.columns):
-                        sale_val_num = row_data.get(quarter, 0)
-                        yoy_val, yoy_status = None, 'neutral'
-                        if sale_val_num == 0:
-                            sale_val_str = "-"
-                        else:
-                            sale_val_str = f"{(sale_val_num / 10000.0):.2f}万"
-                            if i >= 4:
-                                prior_sale_val = row_data.get(sales.columns[i-4], 0)
-                                if prior_sale_val > 0:
-                                    yoy = (sale_val_num / prior_sale_val) - 1
-                                    yoy_val, yoy_status = f"{yoy:.1%}", 'positive' if yoy > 0 else 'negative'
-                                else:
-                                    yoy_val, yoy_status = "New", 'positive'
-                        row_content.append({'type': 'data', 'value': sale_val_str, 'yoy': yoy_val, 'yoy_status': yoy_status})
-                    rows.append(row_content)
-                table_data[key][p_type] = {"headers": headers, "rows": rows}
-
-        print("--- 正在计算支持多维度的战略定位气泡图数据 ---")
-        strategic_positioning_data = {}
-
-        # dims_to_analyze = {
-        #     'pricerange': cols.get('pricerange'),
-        #     'brand': cols.get('brand'),
-        #     'packsize': cols.get('packsize'),
-        #     'tiptype': cols.get('tiptype'),
-        #     'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
-        # }
-
-        for p_type in product_types:
-            strategic_positioning_data[p_type] = {}
-            df_slice_by_type = self.df if p_type == "Overall" else self.df[self.df[type_col] == p_type]
-
-            for dim_key, dim_col_config in dims_to_analyze.items():
-                is_multi_dim = isinstance(dim_col_config, tuple)
-                group_cols = list(dim_col_config) if is_multi_dim else [dim_col_config]
-
-                if any(c is None for c in group_cols) or not all(c in df_slice_by_type.columns for c in group_cols):
-                    continue
-
-                if df_slice_by_type.empty: continue
-
-                try:
-                    quarterly_total_sales_slice = df_slice_by_type.groupby(pd.Grouper(key=date_col, freq='Q'))[sales_col].sum()
-                    sales_by_dim = df_slice_by_type.groupby(group_cols + [pd.Grouper(key=date_col, freq='Q')])[sales_col].sum().unstack(level=date_col).fillna(0)
-
-                    if len(sales_by_dim.columns) < 8: continue
-
-                    recent_quarters = sales_by_dim.columns[-4:]
-                    prior_quarters = sales_by_dim.columns[-8:-4]
-
-                    if not all(q in quarterly_total_sales_slice.index for q in recent_quarters) or \
-                       not all(q in quarterly_total_sales_slice.index for q in prior_quarters):
-                        continue
-
-                    yearly_sales = sales_by_dim[recent_quarters].sum(axis=1)
-                    prior_yearly_sales = sales_by_dim[prior_quarters].sum(axis=1)
-
-                    total_market_yearly_sales = quarterly_total_sales_slice.loc[recent_quarters].sum()
-
-                    # 【核心修正】确保 market_share 和 yoy_growth 在多维交叉时能正确对齐
-                    market_share = (yearly_sales / total_market_yearly_sales) * 100 if total_market_yearly_sales > 0 else 0
-
-                    prior_yearly_sales_safe = prior_yearly_sales.where(prior_yearly_sales > 0, 1)
-                    yoy_growth = ((yearly_sales - prior_yearly_sales) / prior_yearly_sales_safe) * 100
-
-                    total_increment = quarterly_total_sales_slice.loc[recent_quarters].sum() - quarterly_total_sales_slice.loc[prior_quarters].sum()
-                    dim_increment = yearly_sales - prior_yearly_sales
-                    contrib_to_growth = (dim_increment / total_increment) * 100 if total_increment != 0 else 0
-
-                    bubble_data = []
-                    for dim_value_tuple in sales_by_dim.index:
-                        # 【核心修正】将复合索引元组转换为更美观的字符串
-                        label_str = str(dim_value_tuple) if not is_multi_dim else ' & '.join(map(str, dim_value_tuple))
-
-                        bubble_data.append({
-                            "label": label_str,
-                            "x": round(market_share.loc[dim_value_tuple], 1),
-                            "y": round(yoy_growth.loc[dim_value_tuple], 1),
-                            "r": int(yearly_sales.loc[dim_value_tuple]),
-                            "contrib": round(contrib_to_growth.loc[dim_value_tuple], 1)
-                        })
-
-                    strategic_positioning_data[p_type][dim_key] = bubble_data
-
-                except Exception as e:
-                    print(f"❌ 为 '{p_type}' 的 '{dim_key}' 维度生成气泡图时发生错误: {e}")
-                    strategic_positioning_data[p_type][dim_key] = []
-        
-
-
-
         
         return {
             "product_types": product_types, "time_events": dynamic_time_events, "salesForecast": forecast_data,
@@ -2201,6 +2194,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
