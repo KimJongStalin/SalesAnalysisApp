@@ -1238,39 +1238,53 @@ class SalesAnalyzer:
         print("✅ 数据加载与预处理成功。")
         return True
 
-    def prepare_and_get_data(self, user_choices=None):
-        """
-        执行所有分析，并将结果存入 self.dashboard_data
-        """
+       def prepare_and_get_data(self, user_choices=None):
         if not self.load_and_preprocess_data():
-            print("\n❌ 分析因数据加载失败而终止。")
-            return False
+            return {}
 
         print("\n--- 正在准备所有分析数据 ---")
         
-        # ========================================================================
-        # == 以下是您 `VOM分析代码.txt` 中 `prepare_html_report_data` 的完整逻辑 ==
-        # ========================================================================
+        cols = self.config.get('columns', {})
+        date_col, sales_col = cols.get('date'), cols.get('sales')
+        type_col, asin_col = cols.get('type'), cols.get('asin')
         
-        cols = self.config['columns']
-        date_col, sales_col, type_col, asin_col = cols['date'], cols['sales'], cols['type'], cols['asin']
-        # product_types = ["Overall"] + sorted(self.df[type_col].unique().tolist())
-        product_types = ["Overall"] + sorted([p_type.capitalize() for p_type in self.df[type_col].unique().tolist()])
-        dynamic_time_events = []
-        year_agnostic_events = self.config.get("time_events", {})
-        if not self.df.empty and year_agnostic_events:
+        if not all([date_col, sales_col, type_col, asin_col]):
+             print("❌ 错误: 'date', 'sales', 'type', 'asin' 必须在 columns 中配置。"); return {}
+
+        product_types = ["Overall"] + sorted([str(p_type).capitalize() for p_type in self.df[type_col].unique().tolist()])
+        
+        if user_choices and (user_choices.get('single') or user_choices.get('cross')):
+            print("\n--- 根据用户输入动态生成分析维度 ---")
+            table_dimensions, dims_to_analyze = build_dims_from_strings(
+                user_choices.get('single', ''), user_choices.get('cross', ''), cols
+            )
+        else:
+            print("\n--- 使用默认的分析维度 ---")
+            table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype':['tiptype']}
+            dims_to_analyze = {
+                'brand': cols.get('brand'), 
+                'packsize': cols.get('packsize'),
+                'pricerange': cols.get('pricerange'),
+                'tiptype': cols.get('tiptype')
+            }
+
+        forecast_data, quarterly_yoy_data, table_data, share_data = {}, {}, {}, {}
+        pareto_data, star_product_analysis, structural_kpis, dynamic_time_events = {}, {}, {}, []
+        strategic_positioning_data = {}
+        
+        time_events_config = self.config.get("time_events", {})
+        if not self.df.empty and time_events_config:
             first_data_date = self.df[date_col].min()
             last_year_in_data = self.df[date_col].max().year
             for year in range(first_data_date.year, last_year_in_data + 2):
-                for event_name, mm_dd in year_agnostic_events.items():
-                    full_date_str = f"{year}-{mm_dd}"
+                for event_name, mm_dd in time_events_config.items():
                     try:
-                        event_date = pd.to_datetime(full_date_str)
+                        event_date = pd.to_datetime(f"{year}-{mm_dd}")
                         if event_date >= first_data_date:
-                            dynamic_time_events.append({"label": event_name, "date": full_date_str})
+                            dynamic_time_events.append({"label": event_name, "date": event_date.strftime('%Y-%m-%d')})
                     except ValueError:
                         continue
-
+                            
         print("--- 正在计算销售预测 (采用基础 Prophet 模型)... ---")
 
         forecast_data = {}
@@ -1507,23 +1521,23 @@ class SalesAnalyzer:
             structural_kpis[p_type] = kpi_results
 
 
-        if user_choices and (user_choices.get('single') or user_choices.get('cross')):
-          print("\n--- 根据用户输入动态生成分析维度 ---")
-          table_dimensions, dims_to_analyze = build_dims_from_strings(
-              user_choices.get('single', ''),
-            user_choices.get('cross', ''),
-            cols
-          )
-        else:
-          print("\n--- 使用默认的分析维度 ---")
-          table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
-          dims_to_analyze = {
-            'pricerange': cols.get('pricerange'),
-            'brand': cols.get('brand'),
-            'packsize': cols.get('packsize'),
-            'tiptype': cols.get('tiptype'),
-            'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
-          }
+        # if user_choices and (user_choices.get('single') or user_choices.get('cross')):
+        #   print("\n--- 根据用户输入动态生成分析维度 ---")
+        #   table_dimensions, dims_to_analyze = build_dims_from_strings(
+        #       user_choices.get('single', ''),
+        #     user_choices.get('cross', ''),
+        #     cols
+        #   )
+        # else:
+        #   print("\n--- 使用默认的分析维度 ---")
+        #   table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
+        #   dims_to_analyze = {
+        #     'pricerange': cols.get('pricerange'),
+        #     'brand': cols.get('brand'),
+        #     'packsize': cols.get('packsize'),
+        #     'tiptype': cols.get('tiptype'),
+        #     'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
+        #   }
 
 
         print("--- 正在计算增长表格 ---")
@@ -1741,6 +1755,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
