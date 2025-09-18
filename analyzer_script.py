@@ -1211,45 +1211,48 @@ class SalesAnalyzer:
         print("✅ 数据加载与预处理成功。")
         return True
 
-   def prepare_and_get_data(self, user_choices=None):
-        if not self.load_and_preprocess_data():
-            return {}
+def prepare_and_get_data(self, user_choices=None):
+    if not self.load_and_preprocess_data():
+        return {}
 
-        print("\n--- 正在准备所有分析数据 ---")
-        
-        cols = self.config.get('columns', {})
-        date_col, sales_col = cols.get('date'), cols.get('sales')
-        type_col, asin_col = cols.get('type'), cols.get('asin')
-        
-        if not all([date_col, sales_col, type_col, asin_col]):
-             print("❌ 错误: 'date', 'sales', 'type', 'asin' 必须在 columns 中配置。"); return {}
+    print("\n--- 正在准备所有分析数据 ---")
+    
+    # --- 1. 基础设置 ---
+    cols = self.config.get('columns', {})
+    date_col, sales_col = cols.get('date'), cols.get('sales')
+    type_col, asin_col = cols.get('type'), cols.get('asin')
+    
+    if not all([date_col, sales_col, type_col, asin_col]):
+         print("❌ 错误: 'date', 'sales', 'type', 'asin' 必须在 columns 中配置。"); return {}
 
-        product_types = ["Overall"] + sorted([str(p_type).capitalize() for p_type in self.df[type_col].unique().tolist()])
-        
-        # 1. 市场份额分析的维度【永远】是固定的，在这里直接、无条件地定义
-        share_dimensions = ['type', 'brand', 'packsize', 'pricerange', 'tiptype']
-        
-        # 2. 增长表和气泡图的维度，根据用户输入动态生成
-        if user_choices and (user_choices.get('single') or user_choices.get('cross')):
-            print("\n--- 根据用户输入动态生成【增长表】和【气泡图】的分析维度 ---")
-            table_dimensions, dims_to_analyze = build_dims_from_strings(
-                user_choices.get('single', ''), user_choices.get('cross', ''), cols
-            )
-        else:
-            print("\n--- 使用默认的【增长表】和【气泡图】的分析维度 ---")
-            table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
-            dims_to_analyze = {
-                'pricerange': cols.get('pricerange'),
-                'brand': cols.get('brand'),
-                'packsize': cols.get('packsize'),
-                'tiptype': cols.get('tiptype'),
-                'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
-            }
+    product_types = ["Overall"] + sorted([str(p_type).capitalize() for p_type in self.df[type_col].unique().tolist()])
+    
+    # --- 2. 定义分析指令 ---
+    
+    # a. 市场份额分析的维度【永远】是固定的
+    share_dimensions = ['type', 'brand', 'packsize', 'pricerange', 'tiptype']
+    
+    # b. 增长表和气泡图的维度，根据用户输入动态生成
+    if user_choices and (user_choices.get('single') or user_choices.get('cross')):
+        print("\n--- 根据用户输入动态生成【增长表】和【气泡图】的分析维度 ---")
+        table_dimensions, dims_to_analyze = build_dims_from_strings(
+            user_choices.get('single', ''), user_choices.get('cross', ''), cols
+        )
+    else:
+        print("\n--- 使用默认的【增长表】和【气泡图】的分析维度 ---")
+        table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
+        dims_to_analyze = {
+            'pricerange': cols.get('pricerange'),
+            'brand': cols.get('brand'),
+            'packsize': cols.get('packsize'),
+            'tiptype': cols.get('tiptype'),
+            'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
+        }
 
-        # 初始化所有数据容器
-        forecast_data, quarterly_yoy_data, table_data, share_data = {}, {}, {}, {}
-        pareto_data, star_product_analysis, structural_kpis, dynamic_time_events = {}, {}, {}, []
-        strategic_positioning_data = {}
+    # --- 3. 初始化所有数据容器 (只在这里初始化一次) ---
+    forecast_data, quarterly_yoy_data, table_data, share_data = {}, {}, {}, {}
+    pareto_data, star_product_analysis, structural_kpis, dynamic_time_events = {}, {}, {}, []
+    strategic_positioning_data = {}
    
         dynamic_time_events = []
         year_agnostic_events = self.config.get("time_events", {})
@@ -1679,6 +1682,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
