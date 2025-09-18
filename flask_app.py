@@ -200,12 +200,16 @@ def home_and_upload():
             if os.path.exists(temp_filepath):
                 os.remove(temp_filepath)
 
-
+@app.route('/health')
+def health_check():
+    """一个简单的健康检查接口，会立刻返回"OK"，防止平台因超时而关闭应用。"""
+    return "OK", 200
 # 这是为 Railway 等平台提供的标准启动入口
 if __name__ == '__main__':
     # Railway 会通过环境变量 PORT 告诉应用应该监听哪个端口
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port,debug=True)
+
 
 
 
