@@ -1230,7 +1230,26 @@ class SalesAnalyzer:
         cols = self.config['columns']
         date_col, sales_col, type_col, asin_col = cols['date'], cols['sales'], cols['type'], cols['asin']
         product_types = ["Overall"] + sorted(self.df[type_col].unique().tolist())
-   
+
+        if user_choices and (user_choices.get('single') or user_choices.get('cross')):
+          print("\n--- 根据用户输入动态生成分析维度 ---")
+          table_dimensions, dims_to_analyze = build_dims_from_strings(
+              user_choices.get('single', ''),
+            user_choices.get('cross', ''),
+            cols
+          )
+        else:
+          print("\n--- 使用默认的分析维度 ---")
+          table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
+          dims_to_analyze = {
+            'pricerange': cols.get('pricerange'),
+            'brand': cols.get('brand'),
+            'packsize': cols.get('packsize'),
+            'tiptype': cols.get('tiptype'),
+            'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
+          }
+
+            
         dynamic_time_events = []
         year_agnostic_events = self.config.get("time_events", {})
         if not self.df.empty and year_agnostic_events:
@@ -1482,23 +1501,6 @@ class SalesAnalyzer:
             structural_kpis[p_type] = kpi_results
 
 
-        if user_choices and (user_choices.get('single') or user_choices.get('cross')):
-          print("\n--- 根据用户输入动态生成分析维度 ---")
-          table_dimensions, dims_to_analyze = build_dims_from_strings(
-              user_choices.get('single', ''),
-            user_choices.get('cross', ''),
-            cols
-          )
-        else:
-          print("\n--- 使用默认的分析维度 ---")
-          table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
-          dims_to_analyze = {
-            'pricerange': cols.get('pricerange'),
-            'brand': cols.get('brand'),
-            'packsize': cols.get('packsize'),
-            'tiptype': cols.get('tiptype'),
-            'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
-          }
 
 
         print("--- 正在计算增长表格 ---")
@@ -1680,4 +1682,5 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
