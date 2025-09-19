@@ -86,7 +86,7 @@ import json
 import os
 from flask import Flask, request, render_template
 from werkzeug.utils import secure_filename
-
+from analyzer_script import SalesAnalyzer, analysis_config
 # 导入我们项目中的分析引擎
 # 确保 analyzer_script.py 和 app.py 在同一个目录下
 from analyzer_script import SalesAnalyzer
@@ -157,17 +157,19 @@ def home_and_upload():
         
         try:
             # 准备基础配置
-            config = {
-                "input_filepath": temp_filepath,
-                "html_report": { "template_path": "sales_analysis_report.html" },
-                # 这个 columns 映射关系依然重要，因为它告诉程序内部键名和Excel列名的对应关系
-                "columns": {
-                    "date": "Date", "sales": "Sales", "type": "类型", "brand": "Brand",
-                    "packsize": "产品支数", "pricerange": "ASP区间", "tiptype": "tiptype", "asin": "ASIN",
-                    "first_listed_date": "上架时间"
-                }
-            }
-            
+            # config = {
+            #     "input_filepath": temp_filepath,
+            #     "html_report": { "template_path": "sales_analysis_report.html" },
+            #     # 这个 columns 映射关系依然重要，因为它告诉程序内部键名和Excel列名的对应关系
+            #     "columns": {
+            #         "date": "Date", "sales": "Sales", "type": "类型", "brand": "Brand",
+            #         "packsize": "产品支数", "pricerange": "ASP区间", "tiptype": "tiptype", "asin": "ASIN",
+            #         "first_listed_date": "上架时间"
+            #     }
+            # }
+            config = analysis_config.copy()
+            config['input_filepath'] = temp_filepath
+                    
             # <-- 关键改动: 从前端表单接收用户输入的维度字符串 -->
             single_dims_str = request.form.get('single_dims', '')
             cross_dims_str = request.form.get('cross_dims', '')
@@ -209,6 +211,7 @@ if __name__ == '__main__':
     # Railway 会通过环境变量 PORT 告诉应用应该监听哪个端口
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port,debug=True)
+
 
 
 
