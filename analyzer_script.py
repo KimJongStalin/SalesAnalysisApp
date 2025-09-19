@@ -1808,7 +1808,8 @@ class SalesAnalyzer:
             for p_type in product_types:
                 df_filtered = self.df if p_type == "Overall" else self.df[self.df[type_col] == p_type]
                 if df_filtered.empty: continue
-                sales = df_filtered.groupby(dim_cols + [pd.Grouper(key=date_col, freq='Q')])[sales_col].sum().unstack(date_col).fillna(0)
+                # sales = df_filtered.groupby(dim_cols + [pd.Grouper(key=date_col, freq='Q')])[sales_col].sum().unstack(date_col).fillna(0)
+                sales = df_filtered.groupby(dim_cols + [pd.Grouper(key=date_col, freq='Q')])[sales_col].sum().unstack(level=date_col).fillna(0)
                 if sales.empty: continue
                 if len(sales.columns) > 0:
                     last_quarter_col = sales.columns[-1]
@@ -2224,6 +2225,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
