@@ -1798,7 +1798,41 @@ class SalesAnalyzer:
                             dynamic_time_events.append({"label": event_name, "date": full_date_str})
                     except ValueError:
                         continue
+        # ======================= DEBUGGING BLOCK START =======================
+        print("\n\n" + "="*25 + " DEBUGGING INFO " + "="*25)
+        print(f"DEBUG: 用户输入 (user_choices): {user_choices}")
+        print(f"DEBUG: 生成的增长表维度 (table_dimensions): {table_dimensions}")
+        print(f"DEBUG: 生成的气泡图维度 (dims_to_analyze): {dims_to_analyze}")
+        print(f"DEBUG: Excel文件中的所有列名: {self.df.columns.tolist()}")
+        
+        # 检查增长表维度是否存在
+        print("\nDEBUG: 检查【增长表】维度...")
+        if table_dimensions:
+            for key, dim_names in table_dimensions.items():
+                for dim_name in dim_names:
+                    actual_col = cols.get(dim_name, dim_name)
+                    if actual_col in self.df.columns:
+                        print(f"  - ✅ '{dim_name}' -> '{actual_col}' [在Excel中存在]")
+                    else:
+                        print(f"  - ❌ '{dim_name}' -> '{actual_col}' [在Excel中不存在!]")
+        else:
+            print("  - (增长表维度为空)")
 
+        # 检查气泡图维度是否存在
+        print("\nDEBUG: 检查【气泡图】维度...")
+        if dims_to_analyze:
+            for key, dim_config in dims_to_analyze.items():
+                dims_to_check = list(dim_config) if isinstance(dim_config, tuple) else [dim_config]
+                for dim_name in dims_to_check:
+                    if dim_name in self.df.columns:
+                        print(f"  - ✅ '{dim_name}' [在Excel中存在]")
+                    else:
+                        print(f"  - ❌ '{dim_name}' [在Excel中不存在!]")
+        else:
+            print("  - (气泡图维度为空)")
+        
+        print("="*68 + "\n\n")
+            
         print("--- 正在计算增长表格 ---")
         # table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
         table_data = {}
@@ -2233,6 +2267,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
