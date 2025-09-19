@@ -1856,7 +1856,7 @@ class SalesAnalyzer:
         print("--- 正在计算增长表格 (已采用V2版健康逻辑) ---")
         table_data = {}
         
-        # 使用和气泡图完全一样的循环逻辑来处理我们收到的“任务清单”
+        # 使用和气泡图完全一样的循环逻辑来处理收到的“任务清单”
         for key, dim_names in table_dimensions.items():
             
             # 【移植点1】: 使用和气泡图完全一样的安全检查逻辑
@@ -2295,6 +2295,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
