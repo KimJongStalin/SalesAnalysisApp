@@ -195,7 +195,7 @@
                     const chartData = {
                         datasets: [
                             { type: 'bar', label: '历史销售', data: data.historical, backgroundColor: 'rgba(189, 174, 205, 0.6)', order: 5 },
-                            { type: 'line', label: '预测', data: data.forecast, borderColor: '#F7D691', borderWidth: 2, order: 1 },
+                            { type: 'line', label: 'Prophet基础预测', data: data.forecast, borderColor: '#F7D691', borderWidth: 2, order: 1 },
                             { type: 'line', label: '置信区间', data: data.forecast, parsing: { yAxisKey: 'y_upper' }, fill: '+1', backgroundColor: 'rgba(247, 214, 145, 0.3)', borderColor: 'transparent', pointRadius: 0, order: 2 },
                             { type: 'line', label: 'Lower Bound', data: data.forecast, parsing: { yAxisKey: 'y_lower' }, fill: false, borderColor: 'transparent', pointRadius: 0, order: 3 },
                             { type: 'line', label: '3个月移动平均', data: data.moving_average, borderColor: '#63BF84', borderWidth: 2, borderDash: [5, 5], tension: 0.1, pointRadius: 0, order: 4 },
