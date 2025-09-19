@@ -1799,18 +1799,86 @@ class SalesAnalyzer:
                     except ValueError:
                         continue
                             
-        print("--- 正在计算增长表格 ---")
+        # print("--- 正在计算增长表格 ---")
+        # table_data = {}
+        # for key, dim_names in table_dimensions.items():   
+        #     dim_cols = [cols.get(d) for d in dim_names if cols.get(d) in self.df.columns]
+        #     if len(dim_cols) != len(dim_names): continue
+        #     table_data[key] = {}
+        #     for p_type in product_types:
+        #         df_filtered = self.df if p_type == "Overall" else self.df[self.df[type_col] == p_type]
+        #         if df_filtered.empty: continue
+        #         # sales = df_filtered.groupby(dim_cols + [pd.Grouper(key=date_col, freq='Q')])[sales_col].sum().unstack(date_col).fillna(0)
+        #         sales = df_filtered.groupby(dim_cols + [pd.Grouper(key=date_col, freq='Q')])[sales_col].sum().unstack(level=date_col).fillna(0)
+        #         if sales.empty: continue
+        #         if len(sales.columns) > 0:
+        #             last_quarter_col = sales.columns[-1]
+        #             sales = sales.sort_values(by=last_quarter_col, ascending=False)
+        #         if key == 'brand' and len(sales) > 20:
+        #             top_sales = sales.head(20)
+        #             other_sales = sales.iloc[20:].sum()
+        #             other_row = pd.DataFrame(other_sales).T
+        #             other_row.index = ['其他 (Others)']
+        #             sales = pd.concat([top_sales, other_row])
+        #         if '其他 (Others)' in sales.index:
+        #             other_row = sales.loc[['其他 (Others)']]
+        #             sales = sales.drop('其他 (Others)')
+        #             sales = pd.concat([sales, other_row])
+        #         display_map = self.config.get("header_mappings", {})
+        #         display_names = [display_map.get(name.lower(), name.capitalize()) for name in dim_names]
+        #         display_header = " & ".join(display_names)
+        #         headers = [display_header] + [q.to_period('Q').strftime('%YQ%q') for q in sales.columns]
+        #         rows = []
+        #         for index, row_data in sales.iterrows():
+        #             row_content = [{'type': 'label', 'value': str(index)}]
+        #             for i, quarter in enumerate(sales.columns):
+        #                 sale_val_num = row_data.get(quarter, 0)
+        #                 yoy_val, yoy_status = None, 'neutral'
+        #                 if sale_val_num == 0:
+        #                     sale_val_str = "-"
+        #                 else:
+        #                     sale_val_str = f"{(sale_val_num / 10000.0):.2f}万"
+        #                     if i >= 4:
+        #                         prior_sale_val = row_data.get(sales.columns[i-4], 0)
+        #                         if prior_sale_val > 0:
+        #                             yoy = (sale_val_num / prior_sale_val) - 1
+        #                             yoy_val, yoy_status = f"{yoy:.1%}", 'positive' if yoy > 0 else 'negative'
+        #                         else:
+        #                             yoy_val, yoy_status = "New", 'positive'
+        #                 row_content.append({'type': 'data', 'value': sale_val_str, 'yoy': yoy_val, 'yoy_status': yoy_status})
+        #             rows.append(row_content)
+        #         table_data[key][p_type] = {"headers": headers, "rows": rows}
+
+
+# V V V V V V V V V V V V V V V V V V V V V V V V
+        # 请用下面这段代码，替换您现有的整个“增长表”计算模块
+        
+        print("--- 正在计算增长表格 (已采用V2版健康逻辑) ---")
         table_data = {}
-        for key, dim_names in table_dimensions.items():   
-            dim_cols = [cols.get(d) for d in dim_names if cols.get(d) in self.df.columns]
-            if len(dim_cols) != len(dim_names): continue
+        
+        # 使用和气泡图完全一样的循环逻辑来处理我们收到的“任务清单”
+        for key, dim_names in table_dimensions.items():
+            
+            # 【移植点1】: 使用和气泡图完全一样的安全检查逻辑
+            # 我们需要先“翻译”一下简称，因为 table_dimensions 存的是简称
+            dim_cols_translated = [cols.get(d, d) for d in dim_names]
+
+            if not all(c in self.df.columns for c in dim_cols_translated):
+                print(f"--- [增长表模块] 跳过维度'{key}'，因为列名在Excel中找不到 ---")
+                continue
+
+            print(f"--- [增长表模块] 检查通过，正在为维度 '{key}' 计算 ---")
             table_data[key] = {}
             for p_type in product_types:
                 df_filtered = self.df if p_type == "Overall" else self.df[self.df[type_col] == p_type]
                 if df_filtered.empty: continue
-                # sales = df_filtered.groupby(dim_cols + [pd.Grouper(key=date_col, freq='Q')])[sales_col].sum().unstack(date_col).fillna(0)
-                sales = df_filtered.groupby(dim_cols + [pd.Grouper(key=date_col, freq='Q')])[sales_col].sum().unstack(level=date_col).fillna(0)
+                
+                # 【移植点2】: 使用和气泡图完全一样的 unstack 逻辑
+                sales = df_filtered.groupby(dim_cols_translated + [pd.Grouper(key=date_col, freq='Q')])[sales_col].sum().unstack(level=date_col).fillna(0)
+                
                 if sales.empty: continue
+                
+                # ... 您后续所有的表格格式化代码（排序、合并“其他”等）都保持不变 ...
                 if len(sales.columns) > 0:
                     last_quarter_col = sales.columns[-1]
                     sales = sales.sort_values(by=last_quarter_col, ascending=False)
@@ -1848,6 +1916,8 @@ class SalesAnalyzer:
                         row_content.append({'type': 'data', 'value': sale_val_str, 'yoy': yoy_val, 'yoy_status': yoy_status})
                     rows.append(row_content)
                 table_data[key][p_type] = {"headers": headers, "rows": rows}
+                
+        # ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
 
         print("--- 正在计算支持多维度的战略定位气泡图数据 ---")
         strategic_positioning_data = {}
@@ -2225,6 +2295,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
