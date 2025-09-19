@@ -1860,7 +1860,7 @@ class SalesAnalyzer:
         for key, dim_names in table_dimensions.items():
             
             # 【移植点1】: 使用和气泡图完全一样的安全检查逻辑
-            # 我们需要先“翻译”一下简称，因为 table_dimensions 存的是简称
+            # “翻译”一下简称，因为 table_dimensions 存的是简称
             dim_cols_translated = [cols.get(d, d) for d in dim_names]
 
             if not all(c in self.df.columns for c in dim_cols_translated):
@@ -1878,7 +1878,7 @@ class SalesAnalyzer:
                 
                 if sales.empty: continue
                 
-                # ... 您后续所有的表格格式化代码（排序、合并“其他”等）都保持不变 ...
+              
                 if len(sales.columns) > 0:
                     last_quarter_col = sales.columns[-1]
                     sales = sales.sort_values(by=last_quarter_col, ascending=False)
@@ -2295,6 +2295,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
