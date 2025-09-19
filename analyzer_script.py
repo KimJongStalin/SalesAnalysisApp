@@ -1783,8 +1783,22 @@ class SalesAnalyzer:
                 'tiptype': cols.get('tiptype'),
                 'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
             }
-                
-    
+
+        dynamic_time_events = []
+        year_agnostic_events = self.config.get("time_events", {})
+        if not self.df.empty and year_agnostic_events:
+            first_data_date = self.df[date_col].min()
+            last_year_in_data = self.df[date_col].max().year
+            for year in range(first_data_date.year, last_year_in_data + 2):
+                for event_name, mm_dd in year_agnostic_events.items():
+                    full_date_str = f"{year}-{mm_dd}"
+                    try:
+                        event_date = pd.to_datetime(full_date_str)
+                        if event_date >= first_data_date:
+                            dynamic_time_events.append({"label": event_name, "date": full_date_str})
+                    except ValueError:
+                        continue
+                            
         print("--- 正在计算增长表格 ---")
         # table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
         table_data = {}
@@ -2219,6 +2233,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
