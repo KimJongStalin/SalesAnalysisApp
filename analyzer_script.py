@@ -1852,14 +1852,6 @@ class SalesAnalyzer:
         print("--- 正在计算支持多维度的战略定位气泡图数据 ---")
         strategic_positioning_data = {}
 
-        # dims_to_analyze = {
-        #     'pricerange': cols.get('pricerange'),
-        #     'brand': cols.get('brand'),
-        #     'packsize': cols.get('packsize'),
-        #     'tiptype': cols.get('tiptype'),
-        #     'tiptype_packsize': (cols.get('tiptype'), cols.get('packsize'))
-        # }
-
         for p_type in product_types:
             strategic_positioning_data[p_type] = {}
             df_slice_by_type = self.df if p_type == "Overall" else self.df[self.df[type_col] == p_type]
@@ -2233,6 +2225,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
