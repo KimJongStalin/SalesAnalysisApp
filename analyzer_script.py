@@ -1800,7 +1800,6 @@ class SalesAnalyzer:
                         continue
                             
         print("--- 正在计算增长表格 ---")
-        # table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
         table_data = {}
         for key, dim_names in table_dimensions.items():   
             dim_cols = [cols.get(d) for d in dim_names if cols.get(d) in self.df.columns]
@@ -2225,6 +2224,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
