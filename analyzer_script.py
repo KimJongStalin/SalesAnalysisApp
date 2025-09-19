@@ -1802,8 +1802,7 @@ class SalesAnalyzer:
         print("--- 正在计算增长表格 ---")
         # table_dimensions = {'brand': ['brand'], 'packsize': ['packsize'], 'pricerange': ['pricerange'], 'tiptype': ['tiptype'], 'tiptype_packsize': ['tiptype', 'packsize']}
         table_data = {}
-        for key, dim_names in table_dimensions.items():
-            print(f"DEBUG-增长表: 我看到的列名是 {self.df.columns.tolist()}")    
+        for key, dim_names in table_dimensions.items():   
             dim_cols = [cols.get(d) for d in dim_names if cols.get(d) in self.df.columns]
             if len(dim_cols) != len(dim_names): continue
             table_data[key] = {}
@@ -1866,7 +1865,6 @@ class SalesAnalyzer:
             df_slice_by_type = self.df if p_type == "Overall" else self.df[self.df[type_col] == p_type]
 
             for dim_key, dim_col_config in dims_to_analyze.items():
-                print(f"DEBUG-气泡图: 我看到的列名是 {df_slice_by_type.columns.tolist()}")
                 is_multi_dim = isinstance(dim_col_config, tuple)
                 group_cols = list(dim_col_config) if is_multi_dim else [dim_col_config]
 
@@ -2235,6 +2233,7 @@ if __name__ == '__main__':
         print("--- 独立测试成功 ---")
 
 print("✅ 第二步完成：分析引擎 'analyzer.py' 已创建！")
+
 
 
 
